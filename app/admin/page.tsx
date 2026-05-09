@@ -593,10 +593,10 @@ export default function AdminPage() {
                   {childUsers.map(u => {
                     const assigned = editingTask.assignedTo?.includes(u.id) ?? false;
                     return (
-                      <button key={u.id} onClick={() => setEditingTask(t => ({
+                      <button key={u.id} onClick={() => setEditingTask(t => t ? ({
                         ...t,
                         assignedTo: assigned ? (t.assignedTo ?? []).filter(id => id !== u.id) : [...(t.assignedTo ?? []), u.id]
-                      }))}
+                      }) : t)}
                         className={`flex flex-col items-center gap-1 p-3 rounded-2xl border transition-all min-w-[72px] ${assigned ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-white/5 border-white/10 text-gray-400'}`}>
                         <span className="text-3xl">{u.avatar}</span>
                         <span className="text-xs font-bold">{u.name.split(' ')[0]}</span>
@@ -613,10 +613,10 @@ export default function AdminPage() {
                   {(['week', 'month', 'quarter', 'year'] as GoalPeriod[]).map(p => {
                     const linked = editingTask.linkedGoalPeriods?.includes(p) ?? false;
                     return (
-                      <button key={p} onClick={() => setEditingTask(t => ({
+                      <button key={p} onClick={() => setEditingTask(t => t ? ({
                         ...t,
                         linkedGoalPeriods: linked ? (t.linkedGoalPeriods ?? []).filter(x => x !== p) : [...(t.linkedGoalPeriods ?? []), p]
-                      }))}
+                      }) : t)}
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${linked ? 'bg-purple-600 border-purple-500 text-white' : 'bg-white/5 border-white/10 text-gray-400'}`}>
                         {p === 'week' ? 'Uke' : p === 'month' ? 'Måned' : p === 'quarter' ? 'Kvartal' : 'År'}
                       </button>
