@@ -105,6 +105,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const skipNextSave = useRef(false);
   const sessionRef = useRef<Session | null>(null);
+  const lastSavedAt = useRef<string>('');
 
   // ── Auth + initial data load ──────────────────────────────────────────────
   useEffect(() => {
@@ -135,18 +136,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!s) return;
       const { data } = await supabase
         .from('family_state')
-        .select('state')
+        .select('state, updated_at')
         .eq('auth_user_id', s.user.id)
         .maybeSingle();
-      if (data?.state) {
-        const newState = data.state as AppState;
-        const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('fq-current-user') : null;
-        setState(prev => {
-          if (JSON.stringify(prev) === JSON.stringify(newState)) return prev;
-          skipNextSave.current = true;
-          setTimeout(() => { skipNextSave.current = false; }, 500);
-          return { ...DEFAULT_STATE, ...newState, currentUserId: savedUserId ?? newState.currentUserId };
-        });
+      if (data?.state && data.updated_at) {
+        applyRemoteState(data.state as AppState, data.updated_at);
       }
     }, 15000);
 
@@ -154,16 +148,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const handleVisibility = () => {
       if (!document.hidden && sessionRef.current) {
         const s = sessionRef.current;
-        supabase.from('family_state').select('state').eq('auth_user_id', s.user.id).maybeSingle().then(({ data }) => {
-          if (data?.state) {
-            const newState = data.state as AppState;
-            const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('fq-current-user') : null;
-            setState(prev => {
-              if (JSON.stringify(prev) === JSON.stringify(newState)) return prev;
-              skipNextSave.current = true;
-              setTimeout(() => { skipNextSave.current = false; }, 500);
-              return { ...DEFAULT_STATE, ...newState, currentUserId: savedUserId ?? newState.currentUserId };
-            });
+        supabase.from('family_state').select('state, updated_at').eq('auth_user_id', s.user.id).maybeSingle().then(({ data }) => {
+          if (data?.state && data.updated_at) {
+            applyRemoteState(data.state as AppState, data.updated_at);
           }
         });
       }
@@ -177,6 +164,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const applyRemoteState = (dbState: AppState, dbUpdatedAt: string) => {
+    if (dbUpdatedAt <= lastSavedAt.current) return;
+    const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('fq-current-user') : null;
+    setState(prev => {
+      if (JSON.stringify(prev) === JSON.stringify(dbState)) return prev;
+      skipNextSave.current = true;
+      setTimeout(() => { skipNextSave.current = false; }, 1000);
+      return { ...DEFAULT_STATE, ...dbState, currentUserId: savedUserId ?? dbState.currentUserId };
+    });
+  };
 
   const loadState = async (userId: string) => {
     try {
@@ -218,16 +216,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         { event: '*', schema: 'public', table: 'family_state' },
         (payload) => {
           if (skipNextSave.current) return;
-          const row = payload.new as { auth_user_id?: string; state?: AppState };
+          const row = payload.new as { auth_user_id?: string; state?: AppState; updated_at?: string };
           if (!row?.state || row.auth_user_id !== userId) return;
-          const newState = row.state;
-          const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('fq-current-user') : null;
-          skipNextSave.current = true;
-          setState(prev => {
-            if (JSON.stringify(prev) === JSON.stringify(newState)) return prev;
-            return { ...DEFAULT_STATE, ...newState, currentUserId: savedUserId ?? newState.currentUserId };
-          });
-          setTimeout(() => { skipNextSave.current = false; }, 500);
+          applyRemoteState(row.state, row.updated_at ?? '');
         }
       )
       .subscribe();
@@ -243,12 +234,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
       skipNextSave.current = true;
+      const savedAt = new Date().toISOString();
+      lastSavedAt.current = savedAt;
       await supabase.from('family_state').upsert({
         auth_user_id: session.user.id,
         state,
-        updated_at: new Date().toISOString(),
+        updated_at: savedAt,
       });
-      setTimeout(() => { skipNextSave.current = false; }, 300);
+      setTimeout(() => { skipNextSave.current = false; }, 1000);
     }, 800);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
