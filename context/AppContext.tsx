@@ -104,11 +104,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState>(DEFAULT_STATE);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const skipNextSave = useRef(false);
+  const sessionRef = useRef<Session | null>(null);
 
   // ── Auth + initial data load ──────────────────────────────────────────────
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      sessionRef.current = session;
       if (session) {
         loadState(session.user.id);
       } else {
@@ -118,6 +120,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      sessionRef.current = session;
       if (session) {
         loadState(session.user.id);
       } else {
@@ -126,7 +129,52 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Poll every 15 seconds as fallback for mobile
+    const pollInterval = setInterval(async () => {
+      const s = sessionRef.current;
+      if (!s) return;
+      const { data } = await supabase
+        .from('family_state')
+        .select('state')
+        .eq('auth_user_id', s.user.id)
+        .maybeSingle();
+      if (data?.state) {
+        const newState = data.state as AppState;
+        const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('fq-current-user') : null;
+        setState(prev => {
+          if (JSON.stringify(prev) === JSON.stringify(newState)) return prev;
+          skipNextSave.current = true;
+          setTimeout(() => { skipNextSave.current = false; }, 500);
+          return { ...DEFAULT_STATE, ...newState, currentUserId: savedUserId ?? newState.currentUserId };
+        });
+      }
+    }, 15000);
+
+    // Reload when tab becomes visible again (mobile browser wakes up)
+    const handleVisibility = () => {
+      if (!document.hidden && sessionRef.current) {
+        const s = sessionRef.current;
+        supabase.from('family_state').select('state').eq('auth_user_id', s.user.id).maybeSingle().then(({ data }) => {
+          if (data?.state) {
+            const newState = data.state as AppState;
+            const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('fq-current-user') : null;
+            setState(prev => {
+              if (JSON.stringify(prev) === JSON.stringify(newState)) return prev;
+              skipNextSave.current = true;
+              setTimeout(() => { skipNextSave.current = false; }, 500);
+              return { ...DEFAULT_STATE, ...newState, currentUserId: savedUserId ?? newState.currentUserId };
+            });
+          }
+        });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      subscription.unsubscribe();
+      clearInterval(pollInterval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
