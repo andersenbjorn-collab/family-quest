@@ -103,8 +103,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [state, setState] = useState<AppState>(DEFAULT_STATE);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
-  const fromDB = useRef(false);   // true = last setState came from DB, skip one save
-  const isDirty = useRef(false);  // true = unsaved local changes exist
+  const fromDB = useRef(false);
+  const userIdRef = useRef<string | null>(null);
+
+  const LOCAL_KEY = (uid: string) => `fq-state-${uid}`;
+
+  const applyState = (newState: AppState, fromRemote: boolean) => {
+    const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('fq-current-user') : null;
+    const tasks = newState.tasks?.length > 0 ? newState.tasks : DEFAULT_STATE.tasks;
+    const users = newState.users?.length > 0 ? newState.users : DEFAULT_STATE.users;
+    const next = { ...DEFAULT_STATE, ...newState, tasks, users, currentUserId: savedUserId ?? newState.currentUserId };
+    if (fromRemote) fromDB.current = true;
+    setState(next);
+  };
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -112,9 +123,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       if (!session) setLoading(false);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
-      if (!session) { setState(DEFAULT_STATE); setLoading(false); }
+      if (!session && event === 'SIGNED_OUT') { setState(DEFAULT_STATE); setLoading(false); }
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -123,44 +134,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!session) return;
     const userId = session.user.id;
+    userIdRef.current = userId;
     let cancelled = false;
 
-    const applyDB = (dbState: AppState) => {
-      if (cancelled || isDirty.current) return;
-      const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('fq-current-user') : null;
-      const tasks = dbState.tasks?.length > 0 ? dbState.tasks : DEFAULT_STATE.tasks;
-      const users = dbState.users?.length > 0 ? dbState.users : DEFAULT_STATE.users;
-      const next = { ...DEFAULT_STATE, ...dbState, tasks, users, currentUserId: savedUserId ?? dbState.currentUserId };
-      fromDB.current = true;
-      setState(next);
-    };
+    // 1. Load from localStorage immediately (instant, no flicker)
+    const localRaw = typeof window !== 'undefined' ? localStorage.getItem(LOCAL_KEY(userId)) : null;
+    if (localRaw) {
+      try {
+        const localState = JSON.parse(localRaw) as AppState;
+        applyState(localState, true);
+        setLoading(false);
+      } catch { /* ignore parse errors */ }
+    }
 
-    // Initial load
+    // 2. Load from Supabase (authoritative, may have changes from other devices)
     supabase.from('family_state').select('state').eq('auth_user_id', userId).maybeSingle().then(({ data }) => {
       if (cancelled) return;
       if (data?.state) {
-        applyDB(data.state as AppState);
+        applyState(data.state as AppState, true);
       } else {
         supabase.from('family_state').insert({ auth_user_id: userId, state: DEFAULT_STATE, updated_at: new Date().toISOString() });
       }
       setLoading(false);
     });
 
-    // Realtime — other devices saving
+    // 3. Realtime — changes from other devices
     const channel = supabase.channel(`family_${userId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'family_state' }, (payload) => {
-        if (isDirty.current) return; // Don't overwrite unsaved local changes
+        if (fromDB.current) return;
         const row = payload.new as { auth_user_id?: string; state?: AppState };
         if (!row?.state || row.auth_user_id !== userId) return;
-        applyDB(row.state);
+        applyState(row.state, true);
       })
       .subscribe();
 
-    // Refresh when app comes back to foreground (mobile)
+    // 4. Refresh from Supabase when tab becomes visible again
     const onVisible = () => {
-      if (!document.hidden && !isDirty.current) {
+      if (!document.hidden && !fromDB.current) {
         supabase.from('family_state').select('state').eq('auth_user_id', userId).maybeSingle().then(({ data }) => {
-          if (data?.state) applyDB(data.state as AppState);
+          if (data?.state && !cancelled) applyState(data.state as AppState, true);
         });
       }
     };
@@ -174,26 +186,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user.id]);
 
-  // ── Save to Supabase (debounced) ──────────────────────────────────────────
+  // ── Save state (localStorage instantly, Supabase debounced) ──────────────
   useEffect(() => {
     if (!session || loading) return;
 
-    // If state came from DB, skip this save (avoid save loop)
     if (fromDB.current) {
       fromDB.current = false;
+      // Still save to localStorage so it's available on next page load
+      if (userIdRef.current) {
+        localStorage.setItem(LOCAL_KEY(userIdRef.current), JSON.stringify(state));
+      }
       return;
     }
 
-    // User made a change — mark dirty and schedule save
-    isDirty.current = true;
+    // User change — save to localStorage immediately
+    if (userIdRef.current) {
+      localStorage.setItem(LOCAL_KEY(userIdRef.current), JSON.stringify(state));
+    }
+
+    // Save to Supabase (debounced)
     clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
+      fromDB.current = true; // Prevent realtime echo
       await supabase.from('family_state').upsert({
         auth_user_id: session.user.id,
         state,
         updated_at: new Date().toISOString(),
       });
-      isDirty.current = false;
+      setTimeout(() => { fromDB.current = false; }, 2000);
     }, 800);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
