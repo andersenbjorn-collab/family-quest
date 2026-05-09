@@ -7,6 +7,7 @@ import UserSwitcher from '@/components/UserSwitcher';
 import CelebrationOverlay from '@/components/animations/CelebrationOverlay';
 import { getLevel, getLevelProgress, getNextLevelPoints, LEVEL_NAMES } from '@/types';
 import { Star, Zap, CheckCircle, Clock, ChevronRight, Bell, Award, TrendingUp, Shield, Flame } from 'lucide-react';
+import { InfoModal, InfoButton } from '@/components/InfoModal';
 
 const THEME_ACCENT: Record<string, string> = {
   space: '#6366f1', gaming: '#a855f7', nature: '#10b981', superhero: '#ef4444', minimal: '#6b7280',
@@ -15,9 +16,18 @@ const THEME_EMOJI: Record<string, string> = {
   space: '🚀', gaming: '🎮', nature: '🌲', superhero: '🦸', minimal: '⬛',
 };
 
+const DASHBOARD_INFO = [
+  { icon: '⭐', title: 'Poeng og nivå', desc: 'Fullfør oppgaver for å samle poeng og stige i nivå. Jo høyere nivå, jo bedre tittel!' },
+  { icon: '✅', title: 'Dagens oppgaver', desc: 'Her ser du oppgavene som venter deg i dag. Trykk på dem for å levere.' },
+  { icon: '🎯', title: 'Aktive mål', desc: 'Følg med på fremgangen mot ukemål og månedsmål. Nå målet for å få belønning!' },
+  { icon: '🔔', title: 'Ventende godkjenning', desc: '(Admin) Når et barn leverer en oppgave, dukker det opp et varsel her. Trykk for å godkjenne.' },
+  { icon: '👤', title: 'Bytt bruker', desc: 'Trykk på avataren øverst til høyre for å bytte mellom familiemedlemmer.' },
+];
+
 export default function Dashboard() {
   const { state, currentUser, isAdmin, getTodayCompletions, getWeekCompletions, getPendingApprovals, getUserGoalProgress, markGoalCelebrated } = useApp();
   const [celebGoal, setCelebGoal] = useState<{ title: string; animation: typeof currentUser.animation } | null>(null);
+  const [showInfo, setShowInfo] = useState(false);
 
   const todayCompletions = getTodayCompletions(currentUser.id);
   const weekCompletions = getWeekCompletions(currentUser.id);
@@ -53,13 +63,17 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen px-4 pt-12 pb-8 relative z-10">
         {celebGoal && <CelebrationOverlay type={celebGoal.animation} goalTitle={celebGoal.title} onDone={() => setCelebGoal(null)} />}
+        {showInfo && <InfoModal title="Hjem — hjelp" items={DASHBOARD_INFO} onClose={() => setShowInfo(false)} />}
 
         <div className="flex items-start justify-between mb-6">
           <div>
             <p className="text-gray-400 text-sm">Administrator</p>
             <h1 className="text-3xl font-black text-white">{currentUser.name} {currentUser.avatar}</h1>
           </div>
-          <UserSwitcher />
+          <div className="flex items-center gap-2">
+            <InfoButton onClick={() => setShowInfo(true)} />
+            <UserSwitcher />
+          </div>
         </div>
 
         {/* Pending approvals banner */}
@@ -138,6 +152,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen relative z-10">
       {celebGoal && <CelebrationOverlay type={celebGoal.animation} goalTitle={celebGoal.title} onDone={() => setCelebGoal(null)} />}
+      {showInfo && <InfoModal title="Hjem — hjelp" items={DASHBOARD_INFO} onClose={() => setShowInfo(false)} />}
 
       {/* Hero header */}
       <div className="relative overflow-hidden px-4 pt-12 pb-8">
@@ -152,7 +167,10 @@ export default function Dashboard() {
               <p className="text-gray-400 text-sm font-medium">Hei,</p>
               <h1 className="text-3xl font-black text-white">{currentUser.name} {currentUser.avatar}</h1>
             </div>
-            <UserSwitcher />
+            <div className="flex items-center gap-2">
+              <InfoButton onClick={() => setShowInfo(true)} />
+              <UserSwitcher />
+            </div>
           </div>
 
           {/* Big points card */}

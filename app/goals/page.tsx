@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import ProgressBar from '@/components/ProgressBar';
 import { Target, Plus, CheckCircle, Edit3, Trash2, X, Save, Camera } from 'lucide-react';
+import { InfoModal, InfoButton } from '@/components/InfoModal';
 import { useRef } from 'react';
 import type { Goal, GoalPeriod } from '@/types';
 
@@ -32,11 +33,20 @@ const EMPTY_FORM: FormState = {
   period: 'week', userIds: [], reward: '', rewardDescription: '', rewardImage: undefined,
 };
 
+const GOALS_INFO = [
+  { icon: '🎯', title: 'Hva er et mål?', desc: 'Et mål er et poengkrav innen en periode. Nå det for å få en belønning bestemt av foreldrene.' },
+  { icon: '📅', title: 'Perioder', desc: 'Mål kan være daglige, ukentlige, månedlige, kvartalsvis eller årlige.' },
+  { icon: '📊', title: 'Fremgang', desc: 'Fremdriftslinjen viser hvor mange poeng du har samlet mot målet.' },
+  { icon: '🏆', title: 'Belønning', desc: 'Når målet er nådd vises en feiring og du får belønningen som er avtalt!' },
+  { icon: '➕', title: 'Legg til mål (admin)', desc: 'Trykk «Nytt mål» for å opprette mål for ett eller flere barn.' },
+];
+
 export default function GoalsPage() {
   const { state, currentUser, isAdmin, addGoal, updateGoal, deleteGoal, getUserGoalProgress } = useApp();
   const [showAdd, setShowAdd] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [showInfo, setShowInfo] = useState(false);
   const imageRef = useRef<HTMLInputElement>(null);
 
   const childUsers = state.users.filter(u => u.role === 'child');
@@ -184,15 +194,19 @@ export default function GoalsPage() {
 
   return (
     <div className="min-h-screen px-4 pt-12 pb-8">
+      {showInfo && <InfoModal title="Mål — hjelp" items={GOALS_INFO} onClose={() => setShowInfo(false)} />}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-black text-white flex items-center gap-2">
           <Target className="text-purple-400" size={28} /> Mål
         </h1>
-        {isAdmin && (
-          <button onClick={openAdd} className="btn-primary py-2.5 px-4 text-sm flex items-center gap-2">
-            <Plus size={18} /> Nytt mål
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <InfoButton onClick={() => setShowInfo(true)} />
+          {isAdmin && (
+            <button onClick={openAdd} className="btn-primary py-2.5 px-4 text-sm flex items-center gap-2">
+              <Plus size={18} /> Nytt mål
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stats summary for child */}

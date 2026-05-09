@@ -3,6 +3,8 @@ import { useApp } from '@/context/AppContext';
 import ProgressBar from '@/components/ProgressBar';
 import { getLevel, getLevelProgress, getNextLevelPoints, LEVEL_NAMES, LEVEL_THRESHOLDS } from '@/types';
 import { Star, Trophy, Zap, Calendar, TrendingUp, Award } from 'lucide-react';
+import { InfoModal, InfoButton } from '@/components/InfoModal';
+import { useState } from 'react';
 import type { Theme, AnimationType } from '@/types';
 
 const THEMES: { id: Theme; label: string; emoji: string; color: string }[] = [
@@ -20,9 +22,18 @@ const ANIMATIONS: { id: AnimationType; label: string; emoji: string }[] = [
   { id: 'levelup', label: 'Level-up', emoji: '🆙' },
 ];
 
+const PROFILE_INFO = [
+  { icon: '⭐', title: 'Nivå og poeng', desc: 'Totale poeng bestemmer ditt nivå. Hvert nivå har et eget navn — kan du nå toppen?' },
+  { icon: '🎨', title: 'Tema', desc: 'Velg fargetema for profilen din. Temaet påvirker farger og animasjoner.' },
+  { icon: '🎊', title: 'Feiringsanimasjon', desc: 'Velg hvilken animasjon som vises når du fullfører et mål.' },
+  { icon: '📋', title: 'Siste aktivitet', desc: 'Se de siste godkjente oppgavene og poengene du har tjent.' },
+  { icon: '👨‍👩‍👧', title: 'Familiepoeng (admin)', desc: 'Som admin ser du en oversikt over alle barns poeng og nivå.' },
+];
+
 export default function ProfilePage() {
   const { state, currentUser, isAdmin, updateUser } = useApp();
   const level = getLevel(currentUser.points);
+  const [showInfo, setShowInfo] = useState(false);
   const levelPct = getLevelProgress(currentUser.points);
   const nextLevel = getNextLevelPoints(currentUser.points);
 
@@ -34,7 +45,11 @@ export default function ProfilePage() {
   if (isAdmin) {
     return (
       <div className="min-h-screen px-4 pt-12 pb-8">
-        <h1 className="text-2xl font-black text-white mb-6">Familiepoeng</h1>
+        {showInfo && <InfoModal title="Profil — hjelp" items={PROFILE_INFO} onClose={() => setShowInfo(false)} />}
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-black text-white">Familiepoeng</h1>
+          <InfoButton onClick={() => setShowInfo(true)} />
+        </div>
         <div className="space-y-4">
           {state.users.filter(u => u.role === 'child').map(user => {
             const lv = getLevel(user.points);
@@ -72,16 +87,18 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen px-4 pt-12 pb-8">
+      {showInfo && <InfoModal title="Profil — hjelp" items={PROFILE_INFO} onClose={() => setShowInfo(false)} />}
       {/* Hero */}
       <div className="card card-glow p-6 mb-5 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10" style={{ background: `radial-gradient(circle at top right, ${currentUser.color}, transparent)` }} />
         <div className="relative">
           <div className="flex items-center gap-4 mb-4">
             <div className="text-6xl">{currentUser.avatar}</div>
-            <div>
+            <div className="flex-1">
               <h1 className="text-2xl font-black text-white">{currentUser.name}</h1>
               <div className={`text-base font-bold level-${Math.min(level, 9)}`}>Lv.{level} · {LEVEL_NAMES[level] ?? 'Legende'}</div>
             </div>
+            <InfoButton onClick={() => setShowInfo(true)} />
             <div className="ml-auto text-right">
               <div className="text-4xl font-black text-yellow-400 flex items-center gap-1">
                 {currentUser.points.toLocaleString()} <Star className="fill-yellow-400" size={28} />

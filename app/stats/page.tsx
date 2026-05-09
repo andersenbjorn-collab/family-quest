@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { BarChart3, TrendingUp, Coins, Wifi, Calendar, Star, ChevronRight } from 'lucide-react';
+import { InfoModal, InfoButton } from '@/components/InfoModal';
 import type { GoalPeriod } from '@/types';
 
 type ViewUser = string; // userId
@@ -61,9 +62,18 @@ function RadialProgress({ value, max, color, label, sublabel }: { value: number;
   );
 }
 
+const STATS_INFO = [
+  { icon: '📊', title: 'Poenghistorikk', desc: 'Søylediagram viser poeng per uke (siste 8 uker) og per måned (siste 6 måneder).' },
+  { icon: '👥', title: 'Velg barn (admin)', desc: 'Trykk på navnet øverst for å se statistikken til et bestemt barn.' },
+  { icon: '💰', title: 'Lommepenger', desc: 'Sett en vekslingskurs (poeng per krone). Bruk «Utbetal»-knappen for å konvertere poeng til lommepenger.' },
+  { icon: '🌐', title: 'Internettid', desc: 'Gi internett-tid som belønning. Barnet bruker opptjent tid ved å trykke «Bruk tid».' },
+  { icon: '🏅', title: 'Målprogresjon', desc: 'Se fremgangen mot aktive mål for valgt periode.' },
+];
+
 export default function StatsPage() {
   const { state, currentUser, isAdmin, getPointsHistory, getUserGoalProgress, setPocketMoneySetting, payoutPocketMoney, addInternetTimeReward, useInternetTime } = useApp();
   const [selectedUserId, setSelectedUserId] = useState(isAdmin ? (state.users.find(u => u.role === 'child')?.id ?? '') : currentUser.id);
+  const [showInfo, setShowInfo] = useState(false);
   const [pmRate, setPmRate] = useState('10');
   const [pmCurrency, setPmCurrency] = useState('kr');
   const [pmPoints, setPmPoints] = useState('');
@@ -117,14 +127,16 @@ export default function StatsPage() {
 
   return (
     <div className="min-h-screen px-4 pt-12 pb-8">
+      {showInfo && <InfoModal title="Statistikk — hjelp" items={STATS_INFO} onClose={() => setShowInfo(false)} />}
       <div className="flex items-center gap-3 mb-6">
         <div className="w-12 h-12 bg-purple-600/20 rounded-2xl flex items-center justify-center">
           <BarChart3 className="text-purple-400" size={24} />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-black text-white">Statistikk</h1>
           <p className="text-gray-500 text-sm">Poeng og oversikt</p>
         </div>
+        <InfoButton onClick={() => setShowInfo(true)} />
       </div>
 
       {/* User picker for admin */}

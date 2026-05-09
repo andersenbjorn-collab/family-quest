@@ -2,6 +2,7 @@
 import { useState, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Star, Camera, CheckCircle, Clock, XCircle, Send, ChevronRight, Zap } from 'lucide-react';
+import { InfoModal, InfoButton } from '@/components/InfoModal';
 import type { Task, CompletedTask } from '@/types';
 
 type Tab = 'today' | 'week' | 'all';
@@ -110,10 +111,19 @@ function CompleteModal({ task, onSubmit, onClose }: CompleteModalProps) {
   );
 }
 
+const TASKS_INFO = [
+  { icon: '☀️', title: 'Daglige oppgaver', desc: 'Oppgaver du skal gjøre hver dag. Trykk på en oppgave for å levere den.' },
+  { icon: '📅', title: 'Ukentlige oppgaver', desc: 'Oppgaver som skal fullføres en gang i uken. Finn dem under «Uken»-fanen.' },
+  { icon: '📸', title: 'Bilde som bevis', desc: 'Noen oppgaver krever bilde. Ta et bilde for å dokumentere at du er ferdig.' },
+  { icon: '⏳', title: 'Venter på godkjenning', desc: 'Etter levering venter oppgaven til en admin godkjenner den. Da får du poengene.' },
+  { icon: '✅', title: 'Godkjenn oppgaver (admin)', desc: 'Gå til «Godkjenning»-fanen for å se innleverte oppgaver og godkjenne eller avvise dem.' },
+];
+
 export default function TasksPage() {
   const { state, currentUser, isAdmin, completeTask, approveTask, rejectTask, getTodayCompletions, getWeekCompletions } = useApp();
   const [tab, setTab] = useState<Tab>('today');
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [showInfo, setShowInfo] = useState(false);
 
   const todayCompletions = getTodayCompletions(currentUser.id);
   const weekCompletions = getWeekCompletions(currentUser.id);
@@ -149,7 +159,11 @@ export default function TasksPage() {
 
     return (
       <div className="min-h-screen px-4 pt-12 pb-8">
-        <h1 className="text-2xl font-black text-white mb-6">Oppgavesenter</h1>
+        {showInfo && <InfoModal title="Oppgaver — hjelp" items={TASKS_INFO} onClose={() => setShowInfo(false)} />}
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-black text-white">Oppgavesenter</h1>
+          <InfoButton onClick={() => setShowInfo(true)} />
+        </div>
 
         <div className="flex gap-2 mb-5">
           {(['today', 'week', 'all'] as Tab[]).map(t => (
@@ -326,11 +340,15 @@ export default function TasksPage() {
 
   return (
     <div className="min-h-screen px-4 pt-12 pb-8">
+      {showInfo && <InfoModal title="Oppgaver — hjelp" items={TASKS_INFO} onClose={() => setShowInfo(false)} />}
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-black text-white flex items-center gap-2 mb-4">
-          <Zap className="text-yellow-400" size={26} /> Mine oppgaver
-        </h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-black text-white flex items-center gap-2">
+            <Zap className="text-yellow-400" size={26} /> Mine oppgaver
+          </h1>
+          <InfoButton onClick={() => setShowInfo(true)} />
+        </div>
 
         {/* Daily progress bar */}
         <div className="bg-gray-900/80 rounded-2xl border border-white/5 p-4">

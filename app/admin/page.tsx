@@ -2,6 +2,7 @@
 import { useState, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Settings, Users, CheckSquare, Plus, Edit3, Trash2, Star, BookOpen, Sliders, Save, X, Camera, Loader, Key } from 'lucide-react';
+import { InfoModal, InfoButton } from '@/components/InfoModal';
 import type { Task, TaskFrequency, GoalPeriod } from '@/types';
 
 type AdminTab = 'tasks' | 'users' | 'homework' | 'points';
@@ -32,6 +33,7 @@ export default function AdminPage() {
   const [newUser, setNewUser] = useState({ name: '', avatar: '🧒', role: 'child' as 'child' | 'admin', theme: 'gaming' as const, animation: 'confetti' as const, color: '#f59e0b' });
   const [hwForm, setHwForm] = useState({ userId: state.users.find(u => u.role === 'child')?.id ?? '', subject: '', dueDate: '', estimatedMinutes: 30 });
   const [apiKey, setApiKey] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('fq-apikey') ?? '' : '');
+  const [showInfo, setShowInfo] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState<{ subject: string; dueDate: string; estimatedMinutes: number; description: string }[]>([]);
   const [scanError, setScanError] = useState('');
@@ -72,6 +74,13 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen px-4 pt-12 pb-8">
+      {showInfo && <InfoModal title="Admin — hjelp" items={[
+        { icon: '📋', title: 'Oppgaver', desc: 'Lag og rediger oppgaver for barna. Sett poeng, ikon, frekvens og hvem som har oppgaven.' },
+        { icon: '👥', title: 'Brukere', desc: 'Legg til nye familiemedlemmer, endre navn, avatar og farge. Slett brukere ved behov.' },
+        { icon: '📚', title: 'Lekser', desc: 'Skriv inn lekseinformasjon for å automatisk opprette en lekse-oppgave for barnet.' },
+        { icon: '⭐', title: 'Poeng', desc: 'Juster poeng manuelt — gi ekstrapoeng for god innsats, eller trekk fra ved brudd på avtaler.' },
+        { icon: '🔑', title: 'API-nøkkel', desc: 'Lim inn en Claude AI-nøkkel for å bruke bildeskannerens automatiske leksegjenkjenning.' },
+      ]} onClose={() => setShowInfo(false)} />}
       <div className="flex items-center gap-3 mb-6">
         <div className="w-12 h-12 bg-indigo-600/20 rounded-2xl flex items-center justify-center">
           <Settings className="text-indigo-400" size={24} />
@@ -80,6 +89,7 @@ export default function AdminPage() {
           <h1 className="text-2xl font-black text-white">Adminpanel</h1>
           <p className="text-gray-500 text-sm">Administrer familien</p>
         </div>
+        <InfoButton onClick={() => setShowInfo(true)} />
         <button
           onClick={() => { if (confirm('Logg ut?')) signOut(); }}
           className="bg-white/10 hover:bg-white/20 text-gray-400 text-xs font-bold px-3 py-2 rounded-xl transition-colors"
