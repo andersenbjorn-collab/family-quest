@@ -1,0 +1,145 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #0a0a1a;
+  --bg-card: #12122a;
+  --bg-card2: #1a1a35;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg-primary);
+  color: #e2e8f0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+/* Card styles */
+.card {
+  @apply bg-gray-900/80 rounded-3xl border border-white/5 backdrop-blur-sm;
+}
+
+.card-glow {
+  box-shadow: 0 0 30px rgba(99, 102, 241, 0.1), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+/* Theme backgrounds */
+.theme-space {
+  background: radial-gradient(ellipse at top, #0d0d2b 0%, #0a0a1a 60%);
+}
+.theme-nature {
+  background: radial-gradient(ellipse at top, #0d1f0d 0%, #0a0a1a 60%);
+}
+.theme-gaming {
+  background: radial-gradient(ellipse at top, #1a0a2e 0%, #0a0a1a 60%);
+}
+.theme-superhero {
+  background: radial-gradient(ellipse at top, #1a0a0a 0%, #0a0a1a 60%);
+}
+.theme-minimal {
+  background: #0a0a0a;
+}
+
+/* Animated background orbs */
+body::before, body::after {
+  content: '';
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(80px);
+  opacity: 0.12;
+}
+body::before {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, #6366f1, #a855f7);
+  top: -100px;
+  right: -100px;
+  animation: float 8s ease-in-out infinite;
+}
+body::after {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, #06b6d4, #3b82f6);
+  bottom: 100px;
+  left: -80px;
+  animation: float 10s ease-in-out infinite reverse;
+}
+
+/* Shimmer gradient */
+.shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+/* Task card hover */
+.task-card {
+  @apply transition-all duration-200 cursor-pointer;
+}
+.task-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+}
+.task-card:active {
+  transform: scale(0.98);
+}
+
+/* Button styles */
+.btn-primary {
+  @apply bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold rounded-2xl px-6 py-3 transition-all duration-200 active:scale-95;
+}
+.btn-secondary {
+  @apply bg-white/10 hover:bg-white/20 active:bg-white/5 text-white font-semibold rounded-2xl px-6 py-3 transition-all duration-200 active:scale-95;
+}
+.btn-success {
+  @apply bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl px-6 py-3 transition-all duration-200 active:scale-95;
+}
+.btn-danger {
+  @apply bg-red-600/80 hover:bg-red-500 text-white font-bold rounded-2xl px-6 py-3 transition-all duration-200 active:scale-95;
+}
+
+/* Input styles */
+.input {
+  @apply w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-all;
+}
+
+/* Fix dropdown option colors */
+select, select option {
+  background-color: #1a1a2e !important;
+  color: white !important;
+}
+select option:hover {
+  background-color: #6366f1 !important;
+}
+
+/* Badge */
+.badge {
+  @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold;
+}
+
+/* Level colors */
+.level-0 { color: #9ca3af; }
+.level-1 { color: #60a5fa; }
+.level-2 { color: #34d399; }
+.level-3 { color: #fbbf24; }
+.level-4 { color: #f97316; }
+.level-5 { color: #a855f7; }
+.level-6 { color: #ec4899; }
+.level-7 { color: #06b6d4; }
+.level-8 { color: #eab308; }
+.level-9 { color: #ef4444; }
