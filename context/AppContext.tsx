@@ -104,6 +104,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState>(DEFAULT_STATE);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const skipNextSave = useRef(false);
+  const isDirty = useRef(false);
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -124,12 +125,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const userId = session.user.id;
     let cancelled = false;
 
-    const applyDB = (dbState: AppState) => {
+    const applyDB = (dbState: AppState, isInitialLoad = false) => {
       if (cancelled) return;
+      if (!isInitialLoad && isDirty.current) return; // Don't overwrite unsaved local changes
       const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('fq-current-user') : null;
       const tasks = dbState.tasks?.length > 0 ? dbState.tasks : DEFAULT_STATE.tasks;
       const users = dbState.users?.length > 0 ? dbState.users : DEFAULT_STATE.users;
       skipNextSave.current = true;
+      isDirty.current = false;
       setState({ ...DEFAULT_STATE, ...dbState, tasks, users, currentUserId: savedUserId ?? dbState.currentUserId });
       setTimeout(() => { skipNextSave.current = false; }, 1000);
     };
@@ -138,7 +141,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     supabase.from('family_state').select('state').eq('auth_user_id', userId).maybeSingle().then(({ data }) => {
       if (cancelled) return;
       if (data?.state) {
-        applyDB(data.state as AppState);
+        applyDB(data.state as AppState, true);
       } else {
         supabase.from('family_state').insert({ auth_user_id: userId, state: DEFAULT_STATE, updated_at: new Date().toISOString() });
       }
@@ -186,6 +189,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!session || loading) return;
     if (skipNextSave.current) return;
 
+    isDirty.current = true;
     clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
       skipNextSave.current = true;
@@ -194,6 +198,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         state,
         updated_at: new Date().toISOString(),
       });
+      isDirty.current = false;
       setTimeout(() => { skipNextSave.current = false; }, 1000);
     }, 800);
   // eslint-disable-next-line react-hooks/exhaustive-deps
