@@ -104,142 +104,95 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState>(DEFAULT_STATE);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const skipNextSave = useRef(false);
-  const sessionRef = useRef<Session | null>(null);
-  const lastSavedAt = useRef<string>('');
 
-  // ── Auth + initial data load ──────────────────────────────────────────────
+  // ── Auth ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      sessionRef.current = session;
-      if (session) {
-        loadState(session.user.id);
-      } else {
-        setLoading(false);
-      }
+      if (!session) setLoading(false);
     });
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      sessionRef.current = session;
-      if (session) {
-        loadState(session.user.id);
-      } else {
-        setState(DEFAULT_STATE);
-        setLoading(false);
-      }
+      if (!session) { setState(DEFAULT_STATE); setLoading(false); }
     });
-
-    // Poll every 15 seconds as fallback for mobile
-    const pollInterval = setInterval(async () => {
-      const s = sessionRef.current;
-      if (!s) return;
-      const { data } = await supabase
-        .from('family_state')
-        .select('state, updated_at')
-        .eq('auth_user_id', s.user.id)
-        .maybeSingle();
-      if (data?.state && data.updated_at) {
-        applyRemoteState(data.state as AppState, data.updated_at);
-      }
-    }, 15000);
-
-    // Reload when tab becomes visible again (mobile browser wakes up)
-    const handleVisibility = () => {
-      if (!document.hidden && sessionRef.current) {
-        const s = sessionRef.current;
-        supabase.from('family_state').select('state, updated_at').eq('auth_user_id', s.user.id).maybeSingle().then(({ data }) => {
-          if (data?.state && data.updated_at) {
-            applyRemoteState(data.state as AppState, data.updated_at);
-          }
-        });
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    return () => {
-      subscription.unsubscribe();
-      clearInterval(pollInterval);
-      document.removeEventListener('visibilitychange', handleVisibility);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => subscription.unsubscribe();
   }, []);
 
-  const applyRemoteState = (dbState: AppState, dbUpdatedAt: string) => {
-    if (dbUpdatedAt <= lastSavedAt.current) return;
-    const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('fq-current-user') : null;
-    setState(prev => {
-      if (JSON.stringify(prev) === JSON.stringify(dbState)) return prev;
+  // ── Load data + realtime when session changes ─────────────────────────────
+  useEffect(() => {
+    if (!session) return;
+    const userId = session.user.id;
+    let cancelled = false;
+
+    const applyDB = (dbState: AppState) => {
+      if (cancelled) return;
+      const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('fq-current-user') : null;
+      const tasks = dbState.tasks?.length > 0 ? dbState.tasks : DEFAULT_STATE.tasks;
+      const users = dbState.users?.length > 0 ? dbState.users : DEFAULT_STATE.users;
       skipNextSave.current = true;
+      setState({ ...DEFAULT_STATE, ...dbState, tasks, users, currentUserId: savedUserId ?? dbState.currentUserId });
       setTimeout(() => { skipNextSave.current = false; }, 1000);
-      return { ...DEFAULT_STATE, ...dbState, currentUserId: savedUserId ?? dbState.currentUserId };
-    });
-  };
+    };
 
-  const loadState = async (userId: string) => {
-    try {
-      const { data } = await supabase
-        .from('family_state')
-        .select('state')
-        .eq('auth_user_id', userId)
-        .maybeSingle();
-
+    // Initial load
+    supabase.from('family_state').select('state').eq('auth_user_id', userId).maybeSingle().then(({ data }) => {
+      if (cancelled) return;
       if (data?.state) {
-        const dbState = data.state as AppState;
-        const tasks = dbState.tasks?.length > 0 ? dbState.tasks : DEFAULT_STATE.tasks;
-        const users = dbState.users?.length > 0 ? dbState.users : DEFAULT_STATE.users;
-        const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('fq-current-user') : null;
-        skipNextSave.current = true;
-        setState({
-          ...DEFAULT_STATE, ...dbState, tasks, users,
-          currentUserId: savedUserId ?? dbState.currentUserId,
-        });
+        applyDB(data.state as AppState);
       } else {
-        // First login — save default state
-        await supabase.from('family_state').insert({
-          auth_user_id: userId,
-          state: DEFAULT_STATE,
-          updated_at: new Date().toISOString(),
-        });
+        supabase.from('family_state').insert({ auth_user_id: userId, state: DEFAULT_STATE, updated_at: new Date().toISOString() });
       }
-    } catch (err) {
-      console.error('Feil ved lasting av data:', err);
-    } finally {
       setLoading(false);
-    }
+    });
 
-    // Real-time subscription — sync data across devices
-    const channel = supabase
-      .channel(`family_${userId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'family_state' },
-        (payload) => {
-          if (skipNextSave.current) return;
-          const row = payload.new as { auth_user_id?: string; state?: AppState; updated_at?: string };
-          if (!row?.state || row.auth_user_id !== userId) return;
-          applyRemoteState(row.state, row.updated_at ?? '');
-        }
-      )
+    // Realtime subscription
+    const channel = supabase.channel(`family_${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'family_state' }, (payload) => {
+        if (skipNextSave.current) return;
+        const row = payload.new as { auth_user_id?: string; state?: AppState };
+        if (!row?.state || row.auth_user_id !== userId) return;
+        applyDB(row.state);
+      })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  };
+    // Poll every 10 seconds (mobile fallback)
+    const poll = setInterval(async () => {
+      if (skipNextSave.current) return;
+      const { data } = await supabase.from('family_state').select('state').eq('auth_user_id', userId).maybeSingle();
+      if (data?.state) applyDB(data.state as AppState);
+    }, 10000);
+
+    // Refresh when tab becomes visible
+    const onVisible = () => {
+      if (!document.hidden && !skipNextSave.current) {
+        supabase.from('family_state').select('state').eq('auth_user_id', userId).maybeSingle().then(({ data }) => {
+          if (data?.state) applyDB(data.state as AppState);
+        });
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+      clearInterval(poll);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user.id]);
 
   // ── Debounced save to Supabase ────────────────────────────────────────────
   useEffect(() => {
     if (!session || loading) return;
-    if (skipNextSave.current) { skipNextSave.current = false; return; }
+    if (skipNextSave.current) return;
 
     clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
       skipNextSave.current = true;
-      const savedAt = new Date().toISOString();
-      lastSavedAt.current = savedAt;
       await supabase.from('family_state').upsert({
         auth_user_id: session.user.id,
         state,
-        updated_at: savedAt,
+        updated_at: new Date().toISOString(),
       });
       setTimeout(() => { skipNextSave.current = false; }, 1000);
     }, 800);
