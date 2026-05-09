@@ -103,8 +103,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [state, setState] = useState<AppState>(DEFAULT_STATE);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
-  const skipNextSave = useRef(false);
-  const isDirty = useRef(false);
+  const fromDB = useRef(false);   // true = last setState came from DB, skip one save
+  const isDirty = useRef(false);  // true = unsaved local changes exist
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -119,55 +119,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // ── Load data + realtime when session changes ─────────────────────────────
+  // ── Load + realtime when logged in ────────────────────────────────────────
   useEffect(() => {
     if (!session) return;
     const userId = session.user.id;
     let cancelled = false;
 
-    const applyDB = (dbState: AppState, isInitialLoad = false) => {
-      if (cancelled) return;
-      if (!isInitialLoad && isDirty.current) return; // Don't overwrite unsaved local changes
+    const applyDB = (dbState: AppState) => {
+      if (cancelled || isDirty.current) return;
       const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('fq-current-user') : null;
       const tasks = dbState.tasks?.length > 0 ? dbState.tasks : DEFAULT_STATE.tasks;
       const users = dbState.users?.length > 0 ? dbState.users : DEFAULT_STATE.users;
-      skipNextSave.current = true;
-      isDirty.current = false;
-      setState({ ...DEFAULT_STATE, ...dbState, tasks, users, currentUserId: savedUserId ?? dbState.currentUserId });
-      setTimeout(() => { skipNextSave.current = false; }, 1000);
+      const next = { ...DEFAULT_STATE, ...dbState, tasks, users, currentUserId: savedUserId ?? dbState.currentUserId };
+      fromDB.current = true;
+      setState(next);
     };
 
     // Initial load
     supabase.from('family_state').select('state').eq('auth_user_id', userId).maybeSingle().then(({ data }) => {
       if (cancelled) return;
       if (data?.state) {
-        applyDB(data.state as AppState, true);
+        applyDB(data.state as AppState);
       } else {
         supabase.from('family_state').insert({ auth_user_id: userId, state: DEFAULT_STATE, updated_at: new Date().toISOString() });
       }
       setLoading(false);
     });
 
-    // Realtime subscription
+    // Realtime — other devices saving
     const channel = supabase.channel(`family_${userId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'family_state' }, (payload) => {
-        if (skipNextSave.current) return;
+        if (isDirty.current) return; // Don't overwrite unsaved local changes
         const row = payload.new as { auth_user_id?: string; state?: AppState };
         if (!row?.state || row.auth_user_id !== userId) return;
         applyDB(row.state);
       })
       .subscribe();
 
-    // Poll every 10 seconds (mobile fallback)
-    const poll = setInterval(async () => {
-      if (skipNextSave.current) return;
-      const { data } = await supabase.from('family_state').select('state').eq('auth_user_id', userId).maybeSingle();
-      if (data?.state) applyDB(data.state as AppState);
-    }, 10000);
-
-    // Refresh when tab becomes visible
+    // Refresh when app comes back to foreground (mobile)
     const onVisible = () => {
-      if (!document.hidden && !skipNextSave.current) {
+      if (!document.hidden && !isDirty.current) {
         supabase.from('family_state').select('state').eq('auth_user_id', userId).maybeSingle().then(({ data }) => {
           if (data?.state) applyDB(data.state as AppState);
         });
@@ -178,28 +169,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
       supabase.removeChannel(channel);
-      clearInterval(poll);
       document.removeEventListener('visibilitychange', onVisible);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user.id]);
 
-  // ── Debounced save to Supabase ────────────────────────────────────────────
+  // ── Save to Supabase (debounced) ──────────────────────────────────────────
   useEffect(() => {
     if (!session || loading) return;
-    if (skipNextSave.current) return;
 
+    // If state came from DB, skip this save (avoid save loop)
+    if (fromDB.current) {
+      fromDB.current = false;
+      return;
+    }
+
+    // User made a change — mark dirty and schedule save
     isDirty.current = true;
     clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
-      skipNextSave.current = true;
       await supabase.from('family_state').upsert({
         auth_user_id: session.user.id,
         state,
         updated_at: new Date().toISOString(),
       });
       isDirty.current = false;
-      setTimeout(() => { skipNextSave.current = false; }, 1000);
     }, 800);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
