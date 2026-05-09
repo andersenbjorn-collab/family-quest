@@ -141,7 +141,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         applyFromDB(data.state as AppState);
       } else {
         // First time — insert default state
-        supabase.from('family_state').upsert({ auth_user_id: userId, state: DEFAULT_STATE, updated_at: new Date().toISOString() });
+        supabase.from('family_state').upsert({ auth_user_id: userId, state: DEFAULT_STATE, updated_at: new Date().toISOString() }, { onConflict: 'auth_user_id' });
       }
       setLoading(false);
     });
@@ -177,11 +177,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
       isSaving.current = true;
-      await supabase.from('family_state').upsert({
+      const { error } = await supabase.from('family_state').upsert({
         auth_user_id: session.user.id,
         state,
         updated_at: new Date().toISOString(),
-      });
+      }, { onConflict: 'auth_user_id' });
+      if (error) console.error('[FQ] Save failed:', error.message);
       setTimeout(() => { isSaving.current = false; }, 1000);
     }, 500);
   // eslint-disable-next-line react-hooks/exhaustive-deps
