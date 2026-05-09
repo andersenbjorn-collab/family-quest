@@ -167,15 +167,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .channel(`family_${userId}`)
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'family_state', filter: `auth_user_id=eq.${userId}` },
+        { event: '*', schema: 'public', table: 'family_state' },
         (payload) => {
           if (skipNextSave.current) return;
-          const newState = (payload.new as { state: AppState }).state;
+          const row = payload.new as { auth_user_id?: string; state?: AppState };
+          if (!row?.state || row.auth_user_id !== userId) return;
+          const newState = row.state;
           const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('fq-current-user') : null;
+          skipNextSave.current = true;
           setState(prev => {
             if (JSON.stringify(prev) === JSON.stringify(newState)) return prev;
             return { ...DEFAULT_STATE, ...newState, currentUserId: savedUserId ?? newState.currentUserId };
           });
+          setTimeout(() => { skipNextSave.current = false; }, 500);
         }
       )
       .subscribe();
