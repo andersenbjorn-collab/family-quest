@@ -103,19 +103,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [state, setState] = useState<AppState>(DEFAULT_STATE);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout>>();
-  const fromDB = useRef(false);
-  const userIdRef = useRef<string | null>(null);
-
-  const LOCAL_KEY = (uid: string) => `fq-state-${uid}`;
-
-  const applyState = (newState: AppState, fromRemote: boolean) => {
-    const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('fq-current-user') : null;
-    const tasks = newState.tasks?.length > 0 ? newState.tasks : DEFAULT_STATE.tasks;
-    const users = newState.users?.length > 0 ? newState.users : DEFAULT_STATE.users;
-    const next = { ...DEFAULT_STATE, ...newState, tasks, users, currentUserId: savedUserId ?? newState.currentUserId };
-    if (fromRemote) fromDB.current = true;
-    setState(next);
-  };
+  const isSaving = useRef(false);
+  const isLoadingFromDB = useRef(false);
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -134,87 +123,67 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!session) return;
     const userId = session.user.id;
-    userIdRef.current = userId;
     let cancelled = false;
 
-    // 1. Load from localStorage immediately (instant, no flicker)
-    const localRaw = typeof window !== 'undefined' ? localStorage.getItem(LOCAL_KEY(userId)) : null;
-    if (localRaw) {
-      try {
-        const localState = JSON.parse(localRaw) as AppState;
-        applyState(localState, true);
-        setLoading(false);
-      } catch { /* ignore parse errors */ }
-    }
+    const applyFromDB = (dbState: AppState) => {
+      if (cancelled || isSaving.current) return;
+      const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('fq-current-user') : null;
+      const tasks = dbState.tasks?.length > 0 ? dbState.tasks : DEFAULT_STATE.tasks;
+      const users = dbState.users?.length > 0 ? dbState.users : DEFAULT_STATE.users;
+      isLoadingFromDB.current = true;
+      setState({ ...DEFAULT_STATE, ...dbState, tasks, users, currentUserId: savedUserId ?? dbState.currentUserId });
+    };
 
-    // 2. Load from Supabase (authoritative, may have changes from other devices)
+    // Load from Supabase
     supabase.from('family_state').select('state').eq('auth_user_id', userId).maybeSingle().then(({ data }) => {
       if (cancelled) return;
       if (data?.state) {
-        applyState(data.state as AppState, true);
+        applyFromDB(data.state as AppState);
       } else {
-        supabase.from('family_state').insert({ auth_user_id: userId, state: DEFAULT_STATE, updated_at: new Date().toISOString() });
+        // First time — insert default state
+        supabase.from('family_state').upsert({ auth_user_id: userId, state: DEFAULT_STATE, updated_at: new Date().toISOString() });
       }
       setLoading(false);
     });
 
-    // 3. Realtime — changes from other devices
+    // Realtime — sync from other devices
     const channel = supabase.channel(`family_${userId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'family_state' }, (payload) => {
-        if (fromDB.current) return;
+        if (isSaving.current) return;
         const row = payload.new as { auth_user_id?: string; state?: AppState };
         if (!row?.state || row.auth_user_id !== userId) return;
-        applyState(row.state, true);
+        applyFromDB(row.state);
       })
       .subscribe();
-
-    // 4. Refresh from Supabase when tab becomes visible again
-    const onVisible = () => {
-      if (!document.hidden && !fromDB.current) {
-        supabase.from('family_state').select('state').eq('auth_user_id', userId).maybeSingle().then(({ data }) => {
-          if (data?.state && !cancelled) applyState(data.state as AppState, true);
-        });
-      }
-    };
-    document.addEventListener('visibilitychange', onVisible);
 
     return () => {
       cancelled = true;
       supabase.removeChannel(channel);
-      document.removeEventListener('visibilitychange', onVisible);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user.id]);
 
-  // ── Save state (localStorage instantly, Supabase debounced) ──────────────
+  // ── Save to Supabase when state changes ───────────────────────────────────
   useEffect(() => {
     if (!session || loading) return;
 
-    if (fromDB.current) {
-      fromDB.current = false;
-      // Still save to localStorage so it's available on next page load
-      if (userIdRef.current) {
-        localStorage.setItem(LOCAL_KEY(userIdRef.current), JSON.stringify(state));
-      }
+    // Skip saving if this state change came from the DB
+    if (isLoadingFromDB.current) {
+      isLoadingFromDB.current = false;
       return;
     }
 
-    // User change — save to localStorage immediately
-    if (userIdRef.current) {
-      localStorage.setItem(LOCAL_KEY(userIdRef.current), JSON.stringify(state));
-    }
-
-    // Save to Supabase (debounced)
+    // User made a change — save to Supabase
     clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
-      fromDB.current = true; // Prevent realtime echo
+      isSaving.current = true;
       await supabase.from('family_state').upsert({
         auth_user_id: session.user.id,
         state,
         updated_at: new Date().toISOString(),
       });
-      setTimeout(() => { fromDB.current = false; }, 2000);
-    }, 800);
+      setTimeout(() => { isSaving.current = false; }, 1000);
+    }, 500);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
 
