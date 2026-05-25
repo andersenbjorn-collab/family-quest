@@ -16,7 +16,7 @@ const AVATAR_STYLES = [
   { style: 'lorelei',    label: 'Tegning' },
 ] as const;
 
-type Tab = 'today' | 'week' | 'all';
+type Tab = 'today' | 'week' | 'bonus' | 'all';
 
 interface CompleteModalProps {
   task: Task;
@@ -164,9 +164,16 @@ export default function TasksPage() {
   const todayTasks = assignedTasks.filter(t => t.frequency === 'daily' && isScheduledToday(t));
   const weeklyTasks = assignedTasks.filter(t => t.frequency === 'weekly');
   const onceTasks = assignedTasks.filter(t => t.frequency === 'once');
+  const bonusTasks = state.tasks.filter(t =>
+    t.isActive && t.frequency === 'bonus' && t.assignedTo.includes(currentUser.id)
+  );
 
   const todayDone = todayCompletions.filter(c => c.status === 'approved').length;
   const todayPoints = todayCompletions.filter(c => c.status === 'approved').reduce((s, c) => s + (c.pointsAwarded ?? 0), 0);
+
+  // Bonus: check if done today (once per day limit)
+  const isBonusDoneToday = (taskId: string) =>
+    todayCompletions.some(c => c.taskId === taskId && (c.status === 'approved' || c.status === 'pending'));
 
   // ADMIN VIEW
   if (isAdmin) {
@@ -448,11 +455,24 @@ export default function TasksPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-5">
-        {(['today', 'week', 'all'] as Tab[]).map(t => (
+      <div className="flex gap-1.5 mb-5">
+        {(['today', 'week', 'bonus', 'all'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`flex-1 py-2.5 rounded-2xl text-sm font-bold transition-all ${tab === t ? 'bg-indigo-600 text-white' : 'bg-white/10 text-gray-400'}`}>
-            {t === 'today' ? '☀️ I dag' : t === 'week' ? '📅 Uken' : '📋 Alle'}
+            className={`flex-1 py-2.5 rounded-2xl text-xs font-bold transition-all relative ${
+              t === 'bonus'
+                ? tab === t ? 'bg-amber-500 text-white' : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                : tab === t ? 'bg-indigo-600 text-white' : 'bg-white/10 text-gray-400'
+            }`}>
+            {t === 'today' ? '☀️ I dag' : t === 'week' ? '📅 Uke' : t === 'bonus' ? (
+              <span className="flex flex-col items-center gap-0.5">
+                ⚡ Bonus
+                {bonusTasks.filter(bt => !isBonusDoneToday(bt.id)).length > 0 && (
+                  <span className="bg-amber-500 text-white text-[9px] font-black rounded-full px-1.5 leading-4">
+                    {bonusTasks.filter(bt => !isBonusDoneToday(bt.id)).length}
+                  </span>
+                )}
+              </span>
+            ) : '📋 Alle'}
           </button>
         ))}
       </div>
@@ -502,6 +522,69 @@ export default function TasksPage() {
                   {onceTasks.map(renderTask)}
                 </>
               )}
+            </>
+          )}
+        </div>
+      )}
+
+      {tab === 'bonus' && (
+        <div className="space-y-3">
+          {bonusTasks.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="text-5xl mb-3">⚡</div>
+              <p className="text-gray-400 font-semibold">Ingen bonusoppgaver ennå</p>
+              <p className="text-gray-600 text-sm mt-1">Admin legger til oppgaver med typen «Bonus»</p>
+            </div>
+          ) : (
+            <>
+              <p className="text-xs text-amber-400/80 font-semibold mb-1">Velg og gjør — én gang per dag, ekstra poeng!</p>
+              {bonusTasks.map(task => {
+                const doneToday = isBonusDoneToday(task.id);
+                const ct = todayCompletions.find(c => c.taskId === task.id);
+                return (
+                  <div
+                    key={task.id}
+                    onClick={() => !doneToday && setActiveTask(task)}
+                    className={`relative overflow-hidden rounded-3xl border-2 transition-all duration-200 ${
+                      doneToday
+                        ? 'opacity-50 border-white/10 bg-white/5'
+                        : 'border-amber-500/40 bg-amber-500/5 active:scale-95 cursor-pointer hover:border-amber-500/70 hover:bg-amber-500/10'
+                    }`}
+                  >
+                    {!doneToday && (
+                      <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent pointer-events-none" />
+                    )}
+                    <div className="p-4 flex items-center gap-4">
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0 ${
+                        doneToday ? 'bg-white/5' : 'bg-amber-500/20'
+                      }`}>
+                        {ct?.status === 'approved' ? '✅' : ct?.status === 'pending' ? '⏳' : task.icon}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-bold text-base ${doneToday ? 'line-through text-gray-500' : 'text-white'}`}>{task.title}</p>
+                        {task.description && <p className="text-gray-500 text-xs mt-0.5 truncate">{task.description}</p>}
+                        {ct?.status === 'pending' && (
+                          <p className="text-yellow-400 text-xs mt-1 font-semibold flex items-center gap-1">
+                            <Clock size={11} /> Venter på godkjenning
+                          </p>
+                        )}
+                        {ct?.status === 'approved' && (
+                          <p className="text-emerald-400 text-xs mt-1 font-semibold flex items-center gap-1">
+                            <CheckCircle size={11} /> Godkjent! +{ct.pointsAwarded}⭐
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex-shrink-0 flex flex-col items-end gap-1">
+                        <div className={`flex items-center gap-1 px-2.5 py-1 rounded-xl ${doneToday ? 'bg-white/5' : 'bg-amber-500/20'}`}>
+                          <Star size={13} className={doneToday ? 'text-gray-600' : 'text-amber-400 fill-amber-400'} />
+                          <span className={`font-black text-sm ${doneToday ? 'text-gray-600' : 'text-amber-400'}`}>{task.points}</span>
+                        </div>
+                        {!doneToday && <ChevronRight size={16} className="text-amber-400" />}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </>
           )}
         </div>

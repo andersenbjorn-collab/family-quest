@@ -1,6 +1,6 @@
 export type Theme = 'space' | 'nature' | 'gaming' | 'superhero' | 'minimal';
 export type AnimationType = 'fireworks' | 'confetti' | 'stars' | 'levelup';
-export type TaskFrequency = 'daily' | 'weekly' | 'monthly' | 'once';
+export type TaskFrequency = 'daily' | 'weekly' | 'monthly' | 'once' | 'bonus';
 export type GoalPeriod = 'day' | 'week' | 'month' | 'quarter' | 'year';
 export type TaskStatus = 'pending' | 'approved' | 'rejected';
 export type UserRole = 'admin' | 'child';

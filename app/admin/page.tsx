@@ -146,8 +146,8 @@ export default function AdminPage() {
                   <div className="flex items-center gap-2 flex-wrap mt-0.5">
                     <span className="text-xs text-yellow-400">⭐ {task.points}</span>
                     <span className="text-xs text-gray-500">·</span>
-                    <span className="text-xs text-gray-500">
-                      {task.frequency === 'daily' ? 'Daglig' : task.frequency === 'weekly' ? 'Ukentlig' : task.frequency === 'monthly' ? 'Månedlig' : 'Engang'}
+                    <span className={`text-xs ${task.frequency === 'bonus' ? 'text-amber-400 font-bold' : 'text-gray-500'}`}>
+                      {task.frequency === 'daily' ? 'Daglig' : task.frequency === 'weekly' ? 'Ukentlig' : task.frequency === 'monthly' ? 'Månedlig' : task.frequency === 'bonus' ? '⚡ Bonus' : 'Engang'}
                     </span>
                     {task.daysOfWeek && task.daysOfWeek.length < 7 && (
                       <span className="text-xs text-indigo-400">
@@ -647,14 +647,27 @@ export default function AdminPage() {
 
               <div>
                 <label className="text-xs text-gray-400 mb-1 block">Frekvens</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {(['daily', 'weekly', 'monthly', 'once'] as TaskFrequency[]).map(f => (
+                <div className="grid grid-cols-3 gap-2 mb-1.5">
+                  {(['daily', 'weekly', 'monthly'] as TaskFrequency[]).map(f => (
                     <button key={f} onClick={() => setEditingTask(t => ({ ...t, frequency: f }))}
                       className={`py-2 px-2 rounded-xl text-xs font-bold transition-all ${editingTask.frequency === f ? 'bg-indigo-600 text-white' : 'bg-white/5 text-gray-400'}`}>
-                      {f === 'daily' ? 'Daglig' : f === 'weekly' ? 'Ukentlig' : f === 'monthly' ? 'Månedlig' : 'Engang'}
+                      {f === 'daily' ? 'Daglig' : f === 'weekly' ? 'Ukentlig' : 'Månedlig'}
                     </button>
                   ))}
                 </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['once', 'bonus'] as TaskFrequency[]).map(f => (
+                    <button key={f} onClick={() => setEditingTask(t => ({ ...t, frequency: f }))}
+                      className={`py-2 px-2 rounded-xl text-xs font-bold transition-all ${editingTask.frequency === f ? (f === 'bonus' ? 'bg-amber-500 text-white' : 'bg-indigo-600 text-white') : 'bg-white/5 text-gray-400'}`}>
+                      {f === 'once' ? 'Engang' : '⚡ Bonusoppgave'}
+                    </button>
+                  ))}
+                </div>
+                {editingTask.frequency === 'bonus' && (
+                  <p className="text-xs text-amber-400/80 mt-1.5 bg-amber-500/10 rounded-xl px-3 py-2">
+                    Vises i «Bonus»-fanen. Barnet velger selv om de vil gjøre den. Én gang per dag.
+                  </p>
+                )}
               </div>
 
               {/* Day-of-week picker — shown for daily and weekly tasks */}
