@@ -285,21 +285,24 @@ export default function TasksPage() {
   const isLittle = currentUser.ageGroup === 'little';
 
   // Overdue: daily tasks from yesterday not completed
+  // Only show if user has some history (not brand new)
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toDateString();
   const yesterdayDOW = yesterday.getDay();
+  const hasAnyHistory = state.completedTasks.some(c => c.userId === currentUser.id);
   const yesterdayDoneIds = new Set(
     state.completedTasks
       .filter(c => c.userId === currentUser.id && new Date(c.completedAt).toDateString() === yesterdayStr)
       .map(c => c.taskId)
   );
-  const missedTasks = state.tasks.filter(t =>
+  const missedTasks = !hasAnyHistory ? [] : state.tasks.filter(t =>
     t.isActive &&
     t.assignedTo.includes(currentUser.id) &&
     t.frequency === 'daily' &&
     (!t.daysOfWeek || t.daysOfWeek.includes(yesterdayDOW)) &&
-    !yesterdayDoneIds.has(t.id)
+    !yesterdayDoneIds.has(t.id) &&
+    new Date(t.createdAt) < yesterday  // task existed before yesterday
   );
 
   // BIG card for little children (age < 7)

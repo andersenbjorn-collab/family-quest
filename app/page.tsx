@@ -152,7 +152,20 @@ export default function SelectUserPage() {
                 </p>
 
                 {/* Today progress */}
-                {total === 0 ? (
+                {isLittle ? (
+                  // Little children: simple big emoji status
+                  <div className="mt-2 text-center">
+                    {total === 0 ? <span className="text-4xl">😴</span>
+                      : allDone ? <span className="text-4xl">🌟</span>
+                      : <span className="text-3xl">{todo > 0 ? '⚡'.repeat(Math.min(todo, 3)) : '✅'}</span>}
+                    {todo > 0 && total > 0 && (
+                      <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden mt-2">
+                        <div className="h-full rounded-full transition-all"
+                          style={{ width: `${(done / total) * 100}%`, background: color }} />
+                      </div>
+                    )}
+                  </div>
+                ) : total === 0 ? (
                   <p className="text-gray-400 text-xs">Ingen oppgaver i dag</p>
                 ) : allDone ? (
                   <p className="text-emerald-400 text-xs font-bold">Alt gjort! 🌟</p>

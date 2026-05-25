@@ -49,6 +49,7 @@ export default function GoalsPage() {
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [showInfo, setShowInfo] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const imageRef = useRef<HTMLInputElement>(null);
 
   const childUsers = state.users.filter(u => u.role === 'child');
@@ -194,12 +195,19 @@ export default function GoalsPage() {
             >
               <Edit3 size={13} /> Rediger
             </button>
-            <button
-              onClick={() => { if (confirm(`Slett "${goal.title}"?`)) deleteGoal(goal.id); }}
-              className="btn-danger py-2 px-3 text-xs"
-            >
-              <Trash2 size={13} />
-            </button>
+            {confirmDeleteId === goal.id ? (
+              <div className="flex gap-1">
+                <button onClick={() => setConfirmDeleteId(null)}
+                  className="bg-white/10 text-gray-400 py-2 px-2 rounded-2xl text-xs font-bold">Avbryt</button>
+                <button onClick={() => { deleteGoal(goal.id); setConfirmDeleteId(null); }}
+                  className="bg-red-600 text-white py-2 px-2 rounded-2xl text-xs font-bold">Slett!</button>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmDeleteId(goal.id)}
+                className="btn-danger py-2 px-3 text-xs">
+                <Trash2 size={13} />
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -487,11 +495,14 @@ export default function GoalsPage() {
                 <button onClick={closeModal} className="btn-secondary flex-1">Avbryt</button>
                 <button
                   onClick={saveForm}
-                  disabled={!form.title || !form.reward || form.userIds.length === 0}
+                  disabled={!form.title || !form.reward || (!form.isGroupGoal && form.userIds.length === 0)}
                   className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-40"
                 >
                   <Save size={16} />
-                  {isEditingGoal ? 'Lagre endringer' : form.userIds.length > 1 ? `Lagre ${form.userIds.length} mål` : 'Lagre mål'}
+                  {isEditingGoal ? 'Lagre endringer'
+                    : form.isGroupGoal ? 'Lagre familiemål'
+                    : form.userIds.length > 1 ? `Lagre ${form.userIds.length} mål`
+                    : 'Lagre mål'}
                 </button>
               </div>
             </div>

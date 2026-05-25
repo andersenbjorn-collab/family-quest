@@ -252,7 +252,7 @@ export default function AdminPage() {
               <div>
                 <label className="text-xs text-gray-400 mb-2 block">Avatar</label>
                 <div className="flex flex-wrap gap-2">
-                  {['🧒', '👦', '👧', '🧑', '👨', '👩', '🧔', '👴', '👵'].map(av => (
+                  {['🦊', '🐱', '🐶', '🦁', '🐯', '🐸', '🐺', '🦄', '🐻', '🐼', '🦋', '🐲', '🦅', '⭐', '🧒', '👦', '👧', '🦸', '🧙', '🧝'].map(av => (
                     <button key={av} onClick={() => setNewUser(u => ({ ...u, avatar: av }))}
                       className={`text-2xl p-2 rounded-xl ${newUser.avatar === av ? 'bg-indigo-600' : 'bg-white/5'}`}>{av}</button>
                   ))}
