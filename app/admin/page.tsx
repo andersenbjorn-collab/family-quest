@@ -1,12 +1,21 @@
 'use client';
 import { useState, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
-import { Settings, Users, CheckSquare, Plus, Edit3, Trash2, Star, BookOpen, Sliders, Save, X, Camera, Loader, Key, RotateCcw } from 'lucide-react';
+import { Settings, Users, CheckSquare, Plus, Edit3, Trash2, Star, BookOpen, Sliders, Save, X, Camera, Loader, Key, RotateCcw, Sparkles } from 'lucide-react';
 import { InfoModal, InfoButton } from '@/components/InfoModal';
 import { HOME_THEMES } from '@/components/ThemeBg';
 import type { Task, TaskFrequency, GoalPeriod } from '@/types';
 
 type AdminTab = 'tasks' | 'users' | 'homework' | 'points';
+
+const AVATAR_STYLES = [
+  { style: 'fun-emoji',   label: '😄 Emoji',      desc: 'Liten' },
+  { style: 'big-smile',   label: '😊 Smil',        desc: 'Barn' },
+  { style: 'adventurer',  label: '⚔️ Eventyr',     desc: 'Alle' },
+  { style: 'bottts',      label: '🤖 Robot',       desc: 'Gaming' },
+  { style: 'pixel-art',   label: '🎮 Pixel',       desc: 'Ungdom' },
+  { style: 'lorelei',     label: '🎨 Illustrasjon', desc: 'Alle' },
+] as const;
 
 const PRESET_ICONS = ['📚', '📖', '🛏️', '🧹', '🛌', '🍽️', '🥄', '🗑️', '👕', '👨‍🍳', '🎒', '🦷', '🌙', '😴', '🚿', '🐕', '🌳', '📵', '⚽', '🎨', '🎵', '🏃', '🧘', '💪'];
 const CATEGORIES = ['skole', 'husarbeid', 'helse', 'læring', 'ansvar', 'sport', 'annet'];
@@ -34,6 +43,10 @@ export default function AdminPage() {
   const [newUser, setNewUser] = useState({ name: '', avatar: '🧒', role: 'child' as 'child' | 'admin', ageGroup: 'child' as 'little' | 'child' | 'teen', theme: 'gaming' as const, animation: 'confetti' as const, color: '#f59e0b' });
   const [hwForm, setHwForm] = useState({ userId: state.users.find(u => u.role === 'child')?.id ?? '', subject: '', dueDate: '', estimatedMinutes: 30 });
   const [apiKey, setApiKey] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('fq-apikey') ?? '' : '');
+  const [openaiKey, setOpenaiKey] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('fq-openai-key') ?? '' : '');
+  const [aiAvatarDesc, setAiAvatarDesc] = useState('');
+  const [isGenAI, setIsGenAI] = useState(false);
+  const [genAiError, setGenAiError] = useState('');
   const [showInfo, setShowInfo] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState<{ subject: string; dueDate: string; estimatedMinutes: number; description: string }[]>([]);
@@ -59,6 +72,27 @@ export default function AdminPage() {
     { id: 'homework', label: 'Lekser', icon: BookOpen },
     { id: 'points', label: 'Poeng', icon: Star },
   ] as const;
+
+  const handleGenerateAI = async () => {
+    if (!aiAvatarDesc || !openaiKey || !editingUser) return;
+    setIsGenAI(true);
+    setGenAiError('');
+    localStorage.setItem('fq-openai-key', openaiKey);
+    try {
+      const res = await fetch('/api/generate-avatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: aiAvatarDesc, openaiKey }),
+      });
+      const data = await res.json() as { imageData?: string; error?: string };
+      if (data.error) throw new Error(data.error);
+      if (data.imageData) setEditingUser(u => u ? { ...u, photoData: data.imageData } : u);
+    } catch (err: unknown) {
+      setGenAiError(err instanceof Error ? err.message : 'Ukjent feil');
+    } finally {
+      setIsGenAI(false);
+    }
+  };
 
   const saveTask = () => {
     if (!editingTask || !editingTask.title) return;
@@ -824,6 +858,72 @@ export default function AdminPage() {
                   ))}
                 </div>
               </div>
+
+              {/* ✨ Avatar generator */}
+              {editingUser.name && (
+                <div className="bg-white/5 rounded-2xl p-3 space-y-3">
+                  <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-yellow-400" /> Generer avatar automatisk
+                  </p>
+
+                  {/* DiceBear styles — free, no key needed */}
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">✅ Gratis — basert på navn</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {AVATAR_STYLES.map(({ style, label }) => {
+                        const url = `https://api.dicebear.com/9.x/${style}/png?seed=${encodeURIComponent(editingUser.name)}&size=128&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+                        const selected = editingUser.photoData === url;
+                        return (
+                          <button key={style} type="button"
+                            onClick={() => setEditingUser(u => u ? { ...u, photoData: url } : u)}
+                            className={`flex flex-col items-center gap-1.5 p-2 rounded-2xl border transition-all ${selected ? 'bg-indigo-600/30 border-indigo-500' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
+                            <img src={url} alt={label} className="w-14 h-14 rounded-xl bg-white/10" />
+                            <span className="text-xs text-gray-300 font-semibold">{label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* AI generation from description */}
+                  <div className="border-t border-white/10 pt-3">
+                    <p className="text-xs text-gray-500 mb-2">🤖 AI fra beskrivelse (OpenAI-nøkkel)</p>
+                    <input
+                      className="input text-sm mb-2"
+                      placeholder="F.eks. en oransje rev med kappe og stjerner..."
+                      value={aiAvatarDesc}
+                      onChange={e => setAiAvatarDesc(e.target.value)}
+                    />
+                    <input
+                      className="input text-xs mb-2"
+                      type="password"
+                      placeholder="OpenAI API-nøkkel (sk-...)"
+                      value={openaiKey}
+                      onChange={e => {
+                        setOpenaiKey(e.target.value);
+                        localStorage.setItem('fq-openai-key', e.target.value);
+                      }}
+                    />
+                    <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener"
+                      className="text-xs text-indigo-400 hover:text-indigo-300 block mb-2">
+                      Hent gratis nøkkel på platform.openai.com →
+                    </a>
+                    <button
+                      type="button"
+                      onClick={handleGenerateAI}
+                      disabled={!aiAvatarDesc.trim() || !openaiKey || isGenAI}
+                      className="btn-primary w-full py-2.5 text-sm disabled:opacity-40 flex items-center justify-center gap-2"
+                    >
+                      {isGenAI
+                        ? <><Loader size={16} className="animate-spin" /> Genererer (~10 sek)...</>
+                        : <><Sparkles size={16} /> Lag AI-avatar</>}
+                    </button>
+                    {genAiError && (
+                      <p className="text-red-400 text-xs mt-2">{genAiError}</p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Color picker */}
               <div>
