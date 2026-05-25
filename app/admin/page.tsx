@@ -383,7 +383,7 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <label className="text-xs text-gray-400 mb-1 block">Estimert tid (min)</label>
-                  <input className="input" type="number" min={5} step={5} value={hwForm.estimatedMinutes} onChange={e => setHwForm(f => ({ ...f, estimatedMinutes: Number(e.target.value) }))} />
+                  <input className="input" type="number" min={5} step={5} value={hwForm.estimatedMinutes} onFocus={e => e.target.select()} onChange={e => setHwForm(f => ({ ...f, estimatedMinutes: Number(e.target.value) }))} />
                 </div>
               </div>
               <button
@@ -553,7 +553,7 @@ export default function AdminPage() {
               </div>
               <div>
                 <label className="text-xs text-gray-400 mb-1 block">Poeng (negativt = trekke fra)</label>
-                <input className="input" type="number" value={pointsAdj.amount} onChange={e => setPointsAdj(p => ({ ...p, amount: Number(e.target.value) }))} />
+                <input className="input" type="number" value={pointsAdj.amount} onFocus={e => e.target.select()} onChange={e => setPointsAdj(p => ({ ...p, amount: Number(e.target.value) }))} />
               </div>
               <input className="input" placeholder="Årsak (vises i historikk)" value={pointsAdj.reason} onChange={e => setPointsAdj(p => ({ ...p, reason: e.target.value }))} />
               <div className="flex gap-3">
@@ -635,7 +635,7 @@ export default function AdminPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-gray-400 mb-1 block">Poeng</label>
-                  <input className="input" type="number" min={1} value={editingTask.points ?? 10} onChange={e => setEditingTask(t => ({ ...t, points: Number(e.target.value) }))} />
+                  <input className="input" type="number" min={1} value={editingTask.points ?? 10} onFocus={e => e.target.select()} onChange={e => setEditingTask(t => ({ ...t, points: Number(e.target.value) }))} />
                 </div>
                 <div>
                   <label className="text-xs text-gray-400 mb-1 block">Kategori</label>

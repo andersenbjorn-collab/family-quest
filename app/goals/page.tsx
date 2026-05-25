@@ -335,6 +335,7 @@ export default function GoalsPage() {
                   type="number"
                   min={1}
                   value={form.targetPoints}
+                  onFocus={e => e.target.select()}
                   onChange={e => setForm(f => ({ ...f, targetPoints: Number(e.target.value) }))}
                 />
               </div>
