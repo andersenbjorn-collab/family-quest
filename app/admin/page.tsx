@@ -48,6 +48,7 @@ export default function AdminPage() {
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState<{ subject: string; dueDate: string; estimatedMinutes: number; description: string }[]>([]);
   const [scanError, setScanError] = useState('');
+  const [avatarSeed, setAvatarSeed] = useState('');
   const scanFileRef = useRef<HTMLInputElement>(null);
   const userPhotoRef = useRef<HTMLInputElement>(null);
   const refImgRef = useRef<HTMLInputElement>(null);
@@ -199,7 +200,7 @@ export default function AdminPage() {
                   <p className="text-gray-500 text-sm">{user.role === 'admin' ? 'Administrator' : `${user.points} ⭐ · Lv.${user.level}`}</p>
                 </div>
                 <div className="flex gap-2 flex-shrink-0">
-                  <button onClick={() => setEditingUser(user)}
+                  <button onClick={() => { setEditingUser(user); setAvatarSeed(''); }}
                     className="bg-indigo-600/20 hover:bg-indigo-600/40 p-2.5 rounded-xl transition-colors">
                     <Edit3 size={16} className="text-indigo-400" />
                   </button>
@@ -892,16 +893,26 @@ export default function AdminPage() {
               {/* ✨ Avatar generator */}
               {editingUser.name && (
                 <div className="bg-white/5 rounded-2xl p-3 space-y-3">
-                  <p className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <Sparkles size={13} className="text-yellow-400" /> Generer avatar automatisk
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <Sparkles size={13} className="text-yellow-400" /> Generer avatar automatisk
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setAvatarSeed(Math.random().toString(36).slice(2, 8))}
+                      className="bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-colors"
+                    >
+                      <RotateCcw size={12} /> Prøv andre
+                    </button>
+                  </div>
 
                   {/* DiceBear styles — free, no key needed */}
                   <div>
-                    <p className="text-xs text-gray-500 mb-2">✅ Gratis — basert på navn</p>
+                    <p className="text-xs text-gray-500 mb-2">✅ Gratis — klikk «Prøv andre» for nye varianter</p>
                     <div className="grid grid-cols-3 gap-2">
                       {AVATAR_STYLES.map(({ style, label }) => {
-                        const url = `https://api.dicebear.com/9.x/${style}/png?seed=${encodeURIComponent(editingUser.name)}&size=128&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+                        const seed = avatarSeed ? `${editingUser.name}-${avatarSeed}` : editingUser.name;
+                        const url = `https://api.dicebear.com/9.x/${style}/png?seed=${encodeURIComponent(seed)}&size=128&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
                         const selected = editingUser.photoData === url;
                         return (
                           <button key={style} type="button"
