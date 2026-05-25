@@ -5,6 +5,7 @@ import { Settings, Users, CheckSquare, Plus, Edit3, Trash2, Star, BookOpen, Slid
 import { InfoModal, InfoButton } from '@/components/InfoModal';
 import { HOME_THEMES } from '@/components/ThemeBg';
 import AppLogo, { LOGO_PRESETS } from '@/components/AppLogo';
+import { urlToBase64 } from '@/lib/imageUtils';
 import type { Task, TaskFrequency, GoalPeriod } from '@/types';
 
 type AdminTab = 'tasks' | 'users' | 'homework' | 'points';
@@ -49,6 +50,7 @@ export default function AdminPage() {
   const [scanResult, setScanResult] = useState<{ subject: string; dueDate: string; estimatedMinutes: number; description: string }[]>([]);
   const [scanError, setScanError] = useState('');
   const [avatarSeed, setAvatarSeed] = useState('');
+  const [generatingAvatar, setGeneratingAvatar] = useState(false);
   const scanFileRef = useRef<HTMLInputElement>(null);
   const userPhotoRef = useRef<HTMLInputElement>(null);
   const refImgRef = useRef<HTMLInputElement>(null);
@@ -913,13 +915,25 @@ export default function AdminPage() {
                       {AVATAR_STYLES.map(({ style, label }) => {
                         const seed = avatarSeed ? `${editingUser.name}-${avatarSeed}` : editingUser.name;
                         const url = `https://api.dicebear.com/9.x/${style}/png?seed=${encodeURIComponent(seed)}&size=128&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
-                        const selected = editingUser.photoData === url;
                         return (
                           <button key={style} type="button"
-                            onClick={() => setEditingUser(u => u ? { ...u, photoData: url } : u)}
-                            className={`flex flex-col items-center gap-1.5 p-2 rounded-2xl border transition-all ${selected ? 'bg-indigo-600/30 border-indigo-500' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
+                            disabled={generatingAvatar}
+                            onClick={async () => {
+                              setGeneratingAvatar(true);
+                              try {
+                                const base64 = await urlToBase64(url);
+                                setEditingUser(u => u ? { ...u, photoData: base64 } : u);
+                              } catch {
+                                setEditingUser(u => u ? { ...u, photoData: url } : u);
+                              } finally {
+                                setGeneratingAvatar(false);
+                              }
+                            }}
+                            className={`flex flex-col items-center gap-1.5 p-2 rounded-2xl border transition-all disabled:opacity-50 ${generatingAvatar ? 'cursor-wait' : 'hover:bg-white/10'} bg-white/5 border-white/10`}>
                             <img src={url} alt={label} className="w-14 h-14 rounded-xl bg-white/10" />
-                            <span className="text-xs text-gray-300 font-semibold">{label}</span>
+                            <span className="text-xs text-gray-300 font-semibold">
+                              {generatingAvatar ? '⏳' : label}
+                            </span>
                           </button>
                         );
                       })}

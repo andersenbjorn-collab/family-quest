@@ -3,6 +3,7 @@ import { useState, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
 import { Star, Camera, CheckCircle, Clock, XCircle, Send, ChevronRight, Zap, RotateCcw, X } from 'lucide-react';
 import { InfoModal, InfoButton } from '@/components/InfoModal';
+import { urlToBase64 } from '@/lib/imageUtils';
 import type { Task, CompletedTask } from '@/types';
 
 const AVATAR_EMOJIS = ['🧒','👦','👧','🧑','👨','👩','🦸','🧙','🧝','🧚','🧜','🦊','🐱','🐶','🦁','🐯','🐸','🐺','🦄','🐻','🐼','🦋','🐲','🦅'];
@@ -136,6 +137,7 @@ export default function TasksPage() {
   const [showInfo, setShowInfo] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [avatarSeed, setAvatarSeed] = useState('');
+  const [generatingAvatar, setGeneratingAvatar] = useState(false);
   const avatarPhotoRef = useRef<HTMLInputElement>(null);
 
   const todayCompletions = getTodayCompletions(currentUser.id);
@@ -581,16 +583,26 @@ export default function TasksPage() {
               {AVATAR_STYLES.map(({ style, label }) => {
                 const seed = avatarSeed ? `${currentUser.name}-${avatarSeed}` : currentUser.name;
                 const url = `https://api.dicebear.com/9.x/${style}/png?seed=${encodeURIComponent(seed)}&size=128&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
-                const selected = currentUser.photoData === url;
                 return (
                   <button key={style}
-                    onClick={() => {
-                      updateUser(currentUser.id, { photoData: url });
-                      setShowAvatarPicker(false);
+                    disabled={generatingAvatar}
+                    onClick={async () => {
+                      setGeneratingAvatar(true);
+                      try {
+                        const base64 = await urlToBase64(url);
+                        updateUser(currentUser.id, { photoData: base64 });
+                      } catch {
+                        updateUser(currentUser.id, { photoData: url });
+                      } finally {
+                        setGeneratingAvatar(false);
+                        setShowAvatarPicker(false);
+                      }
                     }}
-                    className={`flex flex-col items-center gap-1.5 p-2 rounded-2xl border transition-all active:scale-90 ${selected ? 'bg-indigo-600/30 border-indigo-500' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
+                    className={`flex flex-col items-center gap-1.5 p-2 rounded-2xl border transition-all active:scale-90 disabled:opacity-50 ${generatingAvatar ? 'cursor-wait' : ''} bg-white/5 border-white/10 hover:bg-white/10`}>
                     <img src={url} alt={label} className="w-14 h-14 rounded-xl bg-white/10" />
-                    <span className="text-xs text-gray-300 font-semibold">{label}</span>
+                    <span className="text-xs text-gray-300 font-semibold">
+                      {generatingAvatar ? '⏳' : label}
+                    </span>
                   </button>
                 );
               })}
