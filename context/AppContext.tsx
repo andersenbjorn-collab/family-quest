@@ -178,13 +178,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
 
     // Load from Supabase
-    supabase.from('family_state').select('state').eq('auth_user_id', userId).maybeSingle().then(({ data }) => {
+    supabase.from('family_state').select('state').eq('auth_user_id', userId).maybeSingle().then(({ data, error }) => {
       if (cancelled) return;
       if (data?.state) {
         applyFromDB(data.state as AppState);
-      } else {
-        // First time — insert default state
+      } else if (!error) {
+        // Genuinely no row yet (new user) — safe to insert defaults
         supabase.from('family_state').upsert({ auth_user_id: userId, state: DEFAULT_STATE, updated_at: new Date().toISOString() }, { onConflict: 'auth_user_id' });
+      } else {
+        // Query failed (network issue etc.) — do NOT overwrite with defaults, just log
+        console.error('[FQ] Failed to load state from DB:', error.message);
       }
       setLoading(false);
     });
