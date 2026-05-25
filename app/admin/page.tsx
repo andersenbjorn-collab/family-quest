@@ -127,8 +127,45 @@ export default function AdminPage() {
       {/* Tasks tab */}
       {tab === 'tasks' && (
         <div>
+          {/* ⚡ Bonus quick-control */}
+          {(() => {
+            const bonusTasks = state.tasks.filter(t => t.frequency === 'bonus');
+            if (bonusTasks.length === 0) return null;
+            return (
+              <div className="card p-4 mb-4 border border-amber-500/20 bg-amber-500/5">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-white font-bold flex items-center gap-2">
+                    ⚡ Bonusoppgaver
+                    <span className="text-xs font-normal text-gray-500">— skru av/på med én gang</span>
+                  </h3>
+                  <span className="text-xs text-amber-400 font-semibold">
+                    {bonusTasks.filter(t => t.isActive).length}/{bonusTasks.length} på
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {bonusTasks.map(task => (
+                    <div key={task.id} className="flex items-center gap-3">
+                      <span className="text-2xl w-8 text-center flex-shrink-0">{task.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-semibold truncate ${task.isActive ? 'text-white' : 'text-gray-500'}`}>{task.title}</p>
+                        <p className="text-xs text-gray-500">⭐ {task.points} poeng</p>
+                      </div>
+                      {/* Big toggle */}
+                      <button
+                        onClick={() => updateTask(task.id, { isActive: !task.isActive })}
+                        className={`relative w-14 h-7 rounded-full transition-all duration-200 flex-shrink-0 ${task.isActive ? 'bg-amber-500' : 'bg-white/10'}`}
+                      >
+                        <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all duration-200 ${task.isActive ? 'left-8' : 'left-1'}`} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           <div className="flex items-center justify-between mb-4">
-            <p className="text-gray-400 text-sm">{state.tasks.filter(t => t.isActive).length} aktive oppgaver</p>
+            <p className="text-gray-400 text-sm">{state.tasks.filter(t => t.isActive && t.frequency !== 'bonus').length} aktive oppgaver</p>
             <button
               onClick={() => setEditingTask({ ...DEFAULT_TASK, isNew: true })}
               className="btn-primary py-2.5 px-4 text-sm flex items-center gap-2"
@@ -138,7 +175,7 @@ export default function AdminPage() {
           </div>
 
           <div className="space-y-2">
-            {state.tasks.map(task => (
+            {state.tasks.filter(t => t.frequency !== 'bonus').map(task => (
               <div key={task.id} className={`card p-3 flex items-center gap-3 ${!task.isActive ? 'opacity-50' : ''}`}>
                 <span className="text-2xl flex-shrink-0">{task.icon}</span>
                 <div className="flex-1 min-w-0">
