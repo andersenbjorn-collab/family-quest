@@ -4,6 +4,7 @@ import { useApp } from '@/context/AppContext';
 import { Settings, Users, CheckSquare, Plus, Edit3, Trash2, Star, BookOpen, Sliders, Save, X, Camera, Loader, Key, RotateCcw, Sparkles } from 'lucide-react';
 import { InfoModal, InfoButton } from '@/components/InfoModal';
 import { HOME_THEMES } from '@/components/ThemeBg';
+import AppLogo, { LOGO_PRESETS } from '@/components/AppLogo';
 import type { Task, TaskFrequency, GoalPeriod } from '@/types';
 
 type AdminTab = 'tasks' | 'users' | 'homework' | 'points';
@@ -35,7 +36,7 @@ const DEFAULT_TASK: Omit<Task, 'id' | 'createdAt'> = {
 };
 
 export default function AdminPage() {
-  const { state, currentUser, isAdmin, signOut, addTask, updateTask, deleteTask, adjustPoints, addUser, updateUser, deleteUser, addHomework, resetAllPoints, setHomeTheme, setUserPin } = useApp();
+  const { state, currentUser, isAdmin, signOut, addTask, updateTask, deleteTask, adjustPoints, addUser, updateUser, deleteUser, addHomework, resetAllPoints, setHomeTheme, setAppLogo, setUserPin } = useApp();
   const [tab, setTab] = useState<AdminTab>('tasks');
   const [editingTask, setEditingTask] = useState<Partial<Task> & { isNew?: boolean } | null>(null);
   const [editingUser, setEditingUser] = useState<typeof state.users[0] | null>(null);
@@ -50,6 +51,7 @@ export default function AdminPage() {
   const scanFileRef = useRef<HTMLInputElement>(null);
   const userPhotoRef = useRef<HTMLInputElement>(null);
   const refImgRef = useRef<HTMLInputElement>(null);
+  const logoUploadRef = useRef<HTMLInputElement>(null);
 
   if (!isAdmin) return (
     <div className="min-h-screen flex items-center justify-center px-4">
@@ -234,6 +236,59 @@ export default function AdminPage() {
                   {label}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Logo picker */}
+          <div className="card p-4">
+            <h3 className="text-white font-bold mb-3 flex items-center gap-2">🏅 App-logo</h3>
+            <div className="grid grid-cols-4 gap-2 mb-3">
+              {LOGO_PRESETS.map(({ id, label }) => {
+                const selected = (state.appLogo ?? 'shield') === id;
+                return (
+                  <button key={id} onClick={() => setAppLogo(id)}
+                    className={`flex flex-col items-center gap-1.5 py-2 rounded-2xl border transition-all ${selected ? 'bg-indigo-600/30 border-indigo-500' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
+                    <div className="w-10 h-10">
+                      <AppLogo logo={id} size={40} />
+                    </div>
+                    <span className="text-xs text-gray-300 font-semibold leading-tight">{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {/* Custom image upload */}
+            <input
+              ref={logoUploadRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = ev => {
+                  const data = ev.target?.result as string;
+                  if (data) setAppLogo(data);
+                };
+                reader.readAsDataURL(file);
+                e.target.value = '';
+              }}
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => logoUploadRef.current?.click()}
+                className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 text-xs font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 transition-colors"
+              >
+                <Camera size={14} /> Last opp eget bilde
+              </button>
+              {state.appLogo && !LOGO_PRESETS.some(p => p.id === state.appLogo) && (
+                <button
+                  onClick={() => setAppLogo('shield')}
+                  className="bg-red-600/20 hover:bg-red-600/40 border border-red-600/30 text-red-400 text-xs font-bold px-3 py-2.5 rounded-xl transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
           </div>
 

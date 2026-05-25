@@ -54,6 +54,7 @@ const DEFAULT_STATE: AppState = {
   pocketMoneyPayouts: [],
   internetTimeRewards: [],
   homeTheme: 'space',
+  appLogo: 'shield',
   lastResets: {},
 };
 
@@ -113,6 +114,7 @@ interface AppContextType {
   addHomework: (entry: Omit<HomeworkEntry, 'id' | 'createdAt' | 'isTaskCreated'>) => void;
   resetAllPoints: () => void;
   setHomeTheme: (theme: string) => void;
+  setAppLogo: (logo: string) => void;
   setUserPin: (userId: string, pin: string) => void;
   getTodayCompletions: (userId: string) => CompletedTask[];
   getWeekCompletions: (userId: string) => CompletedTask[];
@@ -374,6 +376,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setState(prev => ({ ...prev, homeTheme: theme }));
   };
 
+  const setAppLogo = (logo: string) => {
+    setState(prev => ({ ...prev, appLogo: logo }));
+  };
+
   const setUserPin = (userId: string, pin: string) => {
     setState(prev => ({
       ...prev,
@@ -497,7 +503,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       switchUser, completeTask, approveTask, rejectTask,
       addTask, updateTask, deleteTask,
       addGoal, updateGoal, deleteGoal, markGoalCelebrated,
-      adjustPoints, addUser, updateUser, deleteUser, addHomework, resetAllPoints, setHomeTheme, setUserPin,
+      adjustPoints, addUser, updateUser, deleteUser, addHomework, resetAllPoints, setHomeTheme, setAppLogo, setUserPin,
       getTodayCompletions, getWeekCompletions, getPendingApprovals, getUserGoalProgress, getGroupGoalProgress,
       setPocketMoneySetting, payoutPocketMoney, addInternetTimeReward, useInternetTime, getPointsHistory,
     }}>

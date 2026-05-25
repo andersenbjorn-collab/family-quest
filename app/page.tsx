@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import { Settings, X, Delete } from 'lucide-react';
 import ThemeBg from '@/components/ThemeBg';
+import AppLogo from '@/components/AppLogo';
 
 export default function SelectUserPage() {
   const { state, switchUser } = useApp();
@@ -87,8 +88,13 @@ export default function SelectUserPage() {
       <div className="relative z-10 flex flex-col flex-1">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="text-6xl mb-3 drop-shadow-lg">🎮</div>
-          <h1 className="text-4xl font-black text-white tracking-tight drop-shadow-lg">Family Quest</h1>
+          <div className="flex justify-center mb-4 drop-shadow-2xl">
+            <AppLogo logo={state.appLogo ?? 'shield'} size={90} />
+          </div>
+          <h1 className="text-4xl font-black tracking-tight drop-shadow-lg"
+            style={{ background: 'linear-gradient(135deg, #fff 0%, #c4b5fd 50%, #818cf8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            Family Quest
+          </h1>
           <p className="text-gray-300 mt-2 text-lg drop-shadow">Hvem er du?</p>
         </div>
 

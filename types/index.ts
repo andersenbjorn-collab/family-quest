@@ -130,6 +130,7 @@ export interface AppState {
   pocketMoneyPayouts: PocketMoneyPayout[];
   internetTimeRewards: InternetTimeReward[];
   homeTheme?: string;
+  appLogo?: string;
   lastResets?: { week?: string; month?: string; quarter?: string; year?: string };
 }
 
