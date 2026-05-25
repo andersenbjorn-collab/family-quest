@@ -492,7 +492,20 @@ export default function GoalsPage() {
                 )}
               </div>
 
-              <div className="flex gap-3 pt-2">
+              {/* Validation hint */}
+              {(() => {
+                const missing: string[] = [];
+                if (!form.title) missing.push('navn på målet');
+                if (!form.reward) missing.push('belønning');
+                if (!form.isGroupGoal && form.userIds.length === 0) missing.push('hvem målet gjelder for');
+                return missing.length > 0 ? (
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-2.5 text-amber-400 text-sm">
+                    ⚠️ Mangler: <span className="font-semibold">{missing.join(' og ')}</span>
+                  </div>
+                ) : null;
+              })()}
+
+              <div className="flex gap-3 pt-1">
                 <button onClick={closeModal} className="btn-secondary flex-1">Avbryt</button>
                 <button
                   onClick={saveForm}
