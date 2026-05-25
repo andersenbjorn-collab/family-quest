@@ -43,10 +43,6 @@ export default function AdminPage() {
   const [newUser, setNewUser] = useState({ name: '', avatar: '🧒', role: 'child' as 'child' | 'admin', ageGroup: 'child' as 'little' | 'child' | 'teen', theme: 'gaming' as const, animation: 'confetti' as const, color: '#f59e0b' });
   const [hwForm, setHwForm] = useState({ userId: state.users.find(u => u.role === 'child')?.id ?? '', subject: '', dueDate: '', estimatedMinutes: 30 });
   const [apiKey, setApiKey] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('fq-apikey') ?? '' : '');
-  const [openaiKey, setOpenaiKey] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('fq-openai-key') ?? '' : '');
-  const [aiAvatarDesc, setAiAvatarDesc] = useState('');
-  const [isGenAI, setIsGenAI] = useState(false);
-  const [genAiError, setGenAiError] = useState('');
   const [showInfo, setShowInfo] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState<{ subject: string; dueDate: string; estimatedMinutes: number; description: string }[]>([]);
@@ -72,27 +68,6 @@ export default function AdminPage() {
     { id: 'homework', label: 'Lekser', icon: BookOpen },
     { id: 'points', label: 'Poeng', icon: Star },
   ] as const;
-
-  const handleGenerateAI = async () => {
-    if (!aiAvatarDesc || !openaiKey || !editingUser) return;
-    setIsGenAI(true);
-    setGenAiError('');
-    localStorage.setItem('fq-openai-key', openaiKey);
-    try {
-      const res = await fetch('/api/generate-avatar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: aiAvatarDesc, openaiKey }),
-      });
-      const data = await res.json() as { imageData?: string; error?: string };
-      if (data.error) throw new Error(data.error);
-      if (data.imageData) setEditingUser(u => u ? { ...u, photoData: data.imageData } : u);
-    } catch (err: unknown) {
-      setGenAiError(err instanceof Error ? err.message : 'Ukjent feil');
-    } finally {
-      setIsGenAI(false);
-    }
-  };
 
   const saveTask = () => {
     if (!editingTask || !editingTask.title) return;
@@ -885,43 +860,6 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  {/* AI generation from description */}
-                  <div className="border-t border-white/10 pt-3">
-                    <p className="text-xs text-gray-500 mb-2">🤖 AI fra beskrivelse (OpenAI-nøkkel)</p>
-                    <input
-                      className="input text-sm mb-2"
-                      placeholder="F.eks. en oransje rev med kappe og stjerner..."
-                      value={aiAvatarDesc}
-                      onChange={e => setAiAvatarDesc(e.target.value)}
-                    />
-                    <input
-                      className="input text-xs mb-2"
-                      type="password"
-                      placeholder="OpenAI API-nøkkel (sk-...)"
-                      value={openaiKey}
-                      onChange={e => {
-                        setOpenaiKey(e.target.value);
-                        localStorage.setItem('fq-openai-key', e.target.value);
-                      }}
-                    />
-                    <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener"
-                      className="text-xs text-indigo-400 hover:text-indigo-300 block mb-2">
-                      Hent gratis nøkkel på platform.openai.com →
-                    </a>
-                    <button
-                      type="button"
-                      onClick={handleGenerateAI}
-                      disabled={!aiAvatarDesc.trim() || !openaiKey || isGenAI}
-                      className="btn-primary w-full py-2.5 text-sm disabled:opacity-40 flex items-center justify-center gap-2"
-                    >
-                      {isGenAI
-                        ? <><Loader size={16} className="animate-spin" /> Genererer (~10 sek)...</>
-                        : <><Sparkles size={16} /> Lag AI-avatar</>}
-                    </button>
-                    {genAiError && (
-                      <p className="text-red-400 text-xs mt-2">{genAiError}</p>
-                    )}
-                  </div>
                 </div>
               )}
 
