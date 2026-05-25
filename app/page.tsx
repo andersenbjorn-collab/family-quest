@@ -153,16 +153,28 @@ export default function SelectUserPage() {
 
                 {/* Today progress */}
                 {isLittle ? (
-                  // Little children: simple big emoji status
-                  <div className="mt-2 text-center">
-                    {total === 0 ? <span className="text-4xl">😴</span>
-                      : allDone ? <span className="text-4xl">🌟</span>
-                      : <span className="text-3xl">{todo > 0 ? '⚡'.repeat(Math.min(todo, 3)) : '✅'}</span>}
-                    {todo > 0 && total > 0 && (
-                      <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden mt-2">
-                        <div className="h-full rounded-full transition-all"
-                          style={{ width: `${(done / total) * 100}%`, background: color }} />
-                      </div>
+                  // Little children: big clear task dots + emoji
+                  <div className="mt-3 flex flex-col items-center gap-2">
+                    {total === 0 ? (
+                      <span className="text-5xl">😴</span>
+                    ) : allDone ? (
+                      <span className="text-5xl">🌟</span>
+                    ) : (
+                      <>
+                        {/* Colored dots: filled = done, empty = todo */}
+                        <div className="flex gap-2 flex-wrap justify-center">
+                          {Array.from({ length: total }, (_, i) => (
+                            <div key={i} className="w-5 h-5 rounded-full border-2 transition-all"
+                              style={{
+                                background: i < done ? color : 'transparent',
+                                borderColor: color,
+                              }} />
+                          ))}
+                        </div>
+                        <p className="text-xs font-bold" style={{ color }}>
+                          {todo} igjen
+                        </p>
+                      </>
                     )}
                   </div>
                 ) : total === 0 ? (
