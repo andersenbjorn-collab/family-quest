@@ -420,27 +420,27 @@ export default function GoalsPage() {
 
               {/* Belønning */}
               <div>
-                <label className="text-xs text-gray-400 mb-2 block">Belønning*</label>
-                <div className="grid grid-cols-2 gap-2 mb-2">
+                <label className="text-xs text-gray-400 mb-2 block">Belønning* <span className="font-normal text-gray-500">— skriv selv eller velg hurtigvalg</span></label>
+                <input
+                  className="input text-sm mb-3"
+                  placeholder="F.eks. Kinotur, Pizzakveld, Ekstra skjermtid..."
+                  value={form.reward}
+                  onFocus={e => e.target.select()}
+                  onChange={e => setForm(f => ({ ...f, reward: e.target.value }))}
+                />
+                {/* Quick-fill presets */}
+                <div className="flex flex-wrap gap-1.5">
                   {REWARD_PRESETS.slice(0, 6).map(r => (
                     <button
                       key={r}
                       type="button"
                       onClick={() => setForm(f => ({ ...f, reward: r }))}
-                      className={`text-xs text-left px-3 py-2 rounded-xl border transition-all ${
-                        form.reward === r ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-white/5 border-white/10 text-gray-400'
-                      }`}
+                      className="text-xs px-3 py-1.5 rounded-xl border bg-white/5 border-white/10 text-gray-400 hover:bg-indigo-600/20 hover:border-indigo-500 hover:text-white active:scale-95 transition-all"
                     >
                       {r}
                     </button>
                   ))}
                 </div>
-                <input
-                  className="input text-sm"
-                  placeholder="Eller skriv din egen belønning..."
-                  value={form.reward}
-                  onChange={e => setForm(f => ({ ...f, reward: e.target.value }))}
-                />
               </div>
 
               <input
