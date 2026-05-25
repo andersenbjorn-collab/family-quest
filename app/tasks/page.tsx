@@ -1,9 +1,19 @@
 'use client';
 import { useState, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
-import { Star, Camera, CheckCircle, Clock, XCircle, Send, ChevronRight, Zap } from 'lucide-react';
+import { Star, Camera, CheckCircle, Clock, XCircle, Send, ChevronRight, Zap, RotateCcw, X } from 'lucide-react';
 import { InfoModal, InfoButton } from '@/components/InfoModal';
 import type { Task, CompletedTask } from '@/types';
+
+const AVATAR_EMOJIS = ['🧒','👦','👧','🧑','👨','👩','🦸','🧙','🧝','🧚','🧜','🦊','🐱','🐶','🦁','🐯','🐸','🐺','🦄','🐻','🐼','🦋','🐲','🦅'];
+const AVATAR_STYLES = [
+  { style: 'fun-emoji',  label: 'Emoji'   },
+  { style: 'big-smile',  label: 'Smil'    },
+  { style: 'adventurer', label: 'Eventyr' },
+  { style: 'bottts',     label: 'Robot'   },
+  { style: 'pixel-art',  label: 'Pixel'   },
+  { style: 'lorelei',    label: 'Tegning' },
+] as const;
 
 type Tab = 'today' | 'week' | 'all';
 
@@ -120,10 +130,13 @@ const TASKS_INFO = [
 ];
 
 export default function TasksPage() {
-  const { state, currentUser, isAdmin, completeTask, approveTask, rejectTask, getTodayCompletions, getWeekCompletions } = useApp();
+  const { state, currentUser, isAdmin, completeTask, approveTask, rejectTask, getTodayCompletions, getWeekCompletions, updateUser } = useApp();
   const [tab, setTab] = useState<Tab>('today');
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [showInfo, setShowInfo] = useState(false);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [avatarSeed, setAvatarSeed] = useState('');
+  const avatarPhotoRef = useRef<HTMLInputElement>(null);
 
   const todayCompletions = getTodayCompletions(currentUser.id);
   const weekCompletions = getWeekCompletions(currentUser.id);
@@ -392,9 +405,27 @@ export default function TasksPage() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-black text-white flex items-center gap-2">
-            <Zap className="text-yellow-400" size={26} /> Mine oppgaver
-          </h1>
+          <div className="flex items-center gap-3">
+            {/* Tappable avatar */}
+            <button
+              onClick={() => { setShowAvatarPicker(true); setAvatarSeed(''); }}
+              className="relative flex-shrink-0 active:scale-90 transition-transform"
+              title="Endre avatar"
+            >
+              <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center"
+                style={{ background: currentUser.photoData ? undefined : `${currentUser.color}30`, border: `2px solid ${currentUser.color}` }}>
+                {currentUser.photoData
+                  ? <img src={currentUser.photoData} alt={currentUser.name} className="w-full h-full object-cover" />
+                  : <span className="text-2xl">{currentUser.avatar}</span>
+                }
+              </div>
+              {/* Camera badge */}
+              <span className="absolute -bottom-0.5 -right-0.5 bg-indigo-600 rounded-full w-4 h-4 flex items-center justify-center text-[9px]">✏️</span>
+            </button>
+            <h1 className="text-2xl font-black text-white flex items-center gap-2">
+              <Zap className="text-yellow-400" size={26} /> Mine oppgaver
+            </h1>
+          </div>
           <InfoButton onClick={() => setShowInfo(true)} />
         </div>
 
@@ -492,6 +523,120 @@ export default function TasksPage() {
           onSubmit={handleComplete}
           onClose={() => setActiveTask(null)}
         />
+      )}
+
+      {/* Avatar picker modal */}
+      {showAvatarPicker && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm"
+          onClick={() => setShowAvatarPicker(false)}>
+          <div
+            className="w-full max-w-sm rounded-t-3xl p-5 pb-8 max-h-[85vh] overflow-y-auto"
+            style={{ background: 'linear-gradient(160deg, #12122a 0%, #0a0a1a 100%)', border: '1px solid rgba(255,255,255,0.1)', borderBottom: 'none' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-white font-black text-lg">Endre avatar</p>
+              <button onClick={() => setShowAvatarPicker(false)} className="bg-white/10 p-2 rounded-xl">
+                <X size={18} className="text-gray-400" />
+              </button>
+            </div>
+
+            {/* Current avatar preview */}
+            <div className="flex justify-center mb-4">
+              <div className="w-20 h-20 rounded-full overflow-hidden flex items-center justify-center"
+                style={{ background: currentUser.photoData ? undefined : `${currentUser.color}30`, border: `3px solid ${currentUser.color}` }}>
+                {currentUser.photoData
+                  ? <img src={currentUser.photoData} alt={currentUser.name} className="w-full h-full object-cover" />
+                  : <span className="text-4xl">{currentUser.avatar}</span>
+                }
+              </div>
+            </div>
+
+            {/* Emoji grid */}
+            <p className="text-xs text-gray-400 font-bold mb-2 uppercase tracking-wider">Velg emoji</p>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {AVATAR_EMOJIS.map(av => (
+                <button key={av}
+                  onClick={() => {
+                    updateUser(currentUser.id, { avatar: av, photoData: undefined });
+                    setShowAvatarPicker(false);
+                  }}
+                  className={`text-2xl p-2 rounded-xl transition-all active:scale-90 ${currentUser.avatar === av && !currentUser.photoData ? 'bg-indigo-600 ring-2 ring-indigo-400' : 'bg-white/5 hover:bg-white/10'}`}>
+                  {av}
+                </button>
+              ))}
+            </div>
+
+            {/* DiceBear generated avatars */}
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Genererte avatarer</p>
+              <button
+                onClick={() => setAvatarSeed(Math.random().toString(36).slice(2, 8))}
+                className="bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 transition-colors"
+              >
+                <RotateCcw size={11} /> Nye
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              {AVATAR_STYLES.map(({ style, label }) => {
+                const seed = avatarSeed ? `${currentUser.name}-${avatarSeed}` : currentUser.name;
+                const url = `https://api.dicebear.com/9.x/${style}/png?seed=${encodeURIComponent(seed)}&size=128&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+                const selected = currentUser.photoData === url;
+                return (
+                  <button key={style}
+                    onClick={() => {
+                      updateUser(currentUser.id, { photoData: url });
+                      setShowAvatarPicker(false);
+                    }}
+                    className={`flex flex-col items-center gap-1.5 p-2 rounded-2xl border transition-all active:scale-90 ${selected ? 'bg-indigo-600/30 border-indigo-500' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
+                    <img src={url} alt={label} className="w-14 h-14 rounded-xl bg-white/10" />
+                    <span className="text-xs text-gray-300 font-semibold">{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Upload own photo */}
+            <input
+              ref={avatarPhotoRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = ev => {
+                  const data = ev.target?.result as string;
+                  if (data) {
+                    updateUser(currentUser.id, { photoData: data });
+                    setShowAvatarPicker(false);
+                  }
+                };
+                reader.readAsDataURL(file);
+                e.target.value = '';
+              }}
+            />
+            <button
+              onClick={() => avatarPhotoRef.current?.click()}
+              className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 text-sm font-bold py-3 rounded-2xl flex items-center justify-center gap-2 transition-colors"
+            >
+              <Camera size={16} /> Last opp eget bilde
+            </button>
+
+            {currentUser.photoData && (
+              <button
+                onClick={() => {
+                  updateUser(currentUser.id, { photoData: undefined });
+                  setShowAvatarPicker(false);
+                }}
+                className="w-full mt-2 bg-red-600/10 hover:bg-red-600/20 border border-red-600/20 text-red-400 text-sm font-bold py-2.5 rounded-2xl flex items-center justify-center gap-2 transition-colors"
+              >
+                <X size={14} /> Fjern bilde
+              </button>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
