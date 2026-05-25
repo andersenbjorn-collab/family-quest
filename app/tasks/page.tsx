@@ -123,11 +123,12 @@ function CompleteModal({ task, onSubmit, onClose }: CompleteModalProps) {
 }
 
 const TASKS_INFO = [
-  { icon: '☀️', title: 'Daglige oppgaver', desc: 'Oppgaver du skal gjøre hver dag. Trykk på en oppgave for å levere den.' },
-  { icon: '📅', title: 'Ukentlige oppgaver', desc: 'Oppgaver som skal fullføres en gang i uken. Finn dem under «Uken»-fanen.' },
-  { icon: '📸', title: 'Bilde som bevis', desc: 'Noen oppgaver krever bilde. Ta et bilde for å dokumentere at du er ferdig.' },
-  { icon: '⏳', title: 'Venter på godkjenning', desc: 'Etter levering venter oppgaven til en admin godkjenner den. Da får du poengene.' },
-  { icon: '✅', title: 'Godkjenn oppgaver (admin)', desc: 'Gå til «Godkjenning»-fanen for å se innleverte oppgaver og godkjenne eller avvise dem.' },
+  { icon: '🏠', title: 'Slik fungerer Family Quest', desc: 'Barna gjør oppgaver og tjener poeng. Foreldre godkjenner og bestemmer hva poengene er verdt. Nok poeng = belønning!' },
+  { icon: '☀️', title: 'I dag — daglige oppgaver', desc: 'Her ser du hva som skal gjøres i dag. Trykk på en oppgave, bekreft at du er ferdig (og ta bilde hvis det kreves), og lever den.' },
+  { icon: '⚡', title: 'Bonus — ekstrapoeng', desc: 'Bonusoppgaver er valgfrie sideoppdrag foreldrene har klargjort. Gjør dem når du vil for ekstra poeng — én gang per dag per oppgave.' },
+  { icon: '📅', title: 'Uke — ukentlige oppgaver', desc: 'Oppgaver som bare trengs gjort én gang i uken, f.eks. rydde rommet.' },
+  { icon: '⏳', title: 'Godkjenning', desc: 'Etter levering ser du ⏳ på oppgaven. Foreldrene godkjenner den — da dukker poengene opp på kontoen din.' },
+  { icon: '🖼️', title: 'Endre avatar', desc: 'Trykk på profilbildet ditt øverst til venstre for å bytte emoji, velge en generert avatar, eller laste opp eget bilde.' },
 ];
 
 export default function TasksPage() {

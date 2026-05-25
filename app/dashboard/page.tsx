@@ -17,11 +17,11 @@ const THEME_EMOJI: Record<string, string> = {
 };
 
 const DASHBOARD_INFO = [
-  { icon: '⭐', title: 'Poeng og nivå', desc: 'Fullfør oppgaver for å samle poeng og stige i nivå. Jo høyere nivå, jo bedre tittel!' },
-  { icon: '✅', title: 'Dagens oppgaver', desc: 'Her ser du oppgavene som venter deg i dag. Trykk på dem for å levere.' },
-  { icon: '🎯', title: 'Aktive mål', desc: 'Følg med på fremgangen mot ukemål og månedsmål. Nå målet for å få belønning!' },
-  { icon: '🔔', title: 'Ventende godkjenning', desc: '(Admin) Når et barn leverer en oppgave, dukker det opp et varsel her. Trykk for å godkjenne.' },
-  { icon: '👤', title: 'Bytt bruker', desc: 'Trykk på avataren øverst til høyre for å bytte mellom familiemedlemmer.' },
+  { icon: '🏠', title: 'Hjem-siden', desc: 'Oversikt over dagens oppgaver, fremgang mot mål og totale poeng. Her ser du raskt hva som gjenstår.' },
+  { icon: '⭐', title: 'Poeng og nivå', desc: 'Hvert godkjente oppdrag gir poeng. Samle nok poeng og du stiger i nivå — fra Nybegynner til Kosmisk!' },
+  { icon: '🎯', title: 'Mål og belønninger', desc: 'Foreldene setter opp mål med belønninger. Nå poenggrensen innen perioden og du vinner! Gå til 🎯-siden for å se alle mål.' },
+  { icon: '🔔', title: 'Godkjenning (admin)', desc: 'Når et barn leverer en oppgave, vises et varsel her. Trykk for å godkjenne (gir poeng) eller avvis (ingen poeng).' },
+  { icon: '🧭', title: 'Navigasjon', desc: 'Bruk menylinjen nederst: ✅ Oppgaver, 🎯 Mål, 📊 Statistikk, 👤 Profil, ⚙️ Admin (kun foreldre).' },
 ];
 
 export default function Dashboard() {

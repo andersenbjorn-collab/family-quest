@@ -36,11 +36,12 @@ const EMPTY_FORM: FormState = {
 };
 
 const GOALS_INFO = [
-  { icon: '🎯', title: 'Hva er et mål?', desc: 'Et mål er et poengkrav innen en periode. Nå det for å få en belønning bestemt av foreldrene.' },
-  { icon: '📅', title: 'Perioder', desc: 'Mål kan være daglige, ukentlige, månedlige, kvartalsvis eller årlige.' },
-  { icon: '📊', title: 'Fremgang', desc: 'Fremdriftslinjen viser hvor mange poeng du har samlet mot målet.' },
-  { icon: '🏆', title: 'Belønning', desc: 'Når målet er nådd vises en feiring og du får belønningen som er avtalt!' },
-  { icon: '➕', title: 'Legg til mål (admin)', desc: 'Trykk «Nytt mål» for å opprette mål for ett eller flere barn.' },
+  { icon: '🎯', title: 'Hva er et mål?', desc: 'Et mål er en poenggrense barnet jobber mot. Samler de nok poeng innen perioden, vinner de belønningen dere har avtalt!' },
+  { icon: '👨‍👩‍👧', title: 'Familiemål', desc: 'Slå på «Familiemål» for at alle barnas poeng teller sammen mot ett felles mål. Bra for å jobbe som et lag!' },
+  { icon: '📅', title: 'Perioder', desc: 'Velg uke, måned, kvartal eller år. Poengene nullstilles automatisk når perioden starter på nytt.' },
+  { icon: '🏆', title: 'Belønning', desc: 'Skriv hva barnet vinner — f.eks. «Kinotur» eller «Velge middag». Bruk hurtigvalgene eller skriv fritt.' },
+  { icon: '🎉', title: 'Når målet nås', desc: 'Det kommer en feiringsanimasjon! Målet markeres som fullført, og dere kan avtale belønningen.' },
+  { icon: '➕', title: 'Lage mål (kun admin)', desc: 'Trykk «Nytt mål». Fyll inn navn, poenggrense, periode og belønning. Husk å trykke Lagre!' },
 ];
 
 export default function GoalsPage() {

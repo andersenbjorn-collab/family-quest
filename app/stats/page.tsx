@@ -63,11 +63,11 @@ function RadialProgress({ value, max, color, label, sublabel }: { value: number;
 }
 
 const STATS_INFO = [
-  { icon: '📊', title: 'Poenghistorikk', desc: 'Søylediagram viser poeng per uke (siste 8 uker) og per måned (siste 6 måneder).' },
-  { icon: '👥', title: 'Velg barn (admin)', desc: 'Trykk på navnet øverst for å se statistikken til et bestemt barn.' },
-  { icon: '💰', title: 'Lommepenger', desc: 'Sett en vekslingskurs (poeng per krone). Bruk «Utbetal»-knappen for å konvertere poeng til lommepenger.' },
-  { icon: '🌐', title: 'Internettid', desc: 'Gi internett-tid som belønning. Barnet bruker opptjent tid ved å trykke «Bruk tid».' },
-  { icon: '🏅', title: 'Målprogresjon', desc: 'Se fremgangen mot aktive mål for valgt periode.' },
+  { icon: '📊', title: 'Poenghistorikk', desc: 'Søylediagrammet viser poeng per uke (siste 8 uker). Bra for å se om innsatsen øker over tid!' },
+  { icon: '👥', title: 'Velg barn (admin)', desc: 'Trykk på barnets navn øverst for å bytte mellom hvem du ser statistikk for.' },
+  { icon: '💰', title: 'Lommepenger', desc: 'Sett en kurs, f.eks. 10 poeng = 1 krone. Trykk «Utbetal» for å trekke poeng og notere utbetaling. Historikken vises under.' },
+  { icon: '🌐', title: 'Internettid', desc: 'Poeng kan veksles til skjermtid. Sett minutter per poeng, og barnet kan «bruke» opptjent tid selv.' },
+  { icon: '🏅', title: 'Målprogresjon', desc: 'Viser fremgangen mot aktive mål. Gå til 🎯-siden for å opprette og redigere mål.' },
 ];
 
 export default function StatsPage() {

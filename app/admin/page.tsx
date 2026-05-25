@@ -89,12 +89,13 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen px-4 pt-12 pb-8">
-      {showInfo && <InfoModal title="Admin — hjelp" items={[
-        { icon: '📋', title: 'Oppgaver', desc: 'Lag og rediger oppgaver for barna. Sett poeng, ikon, frekvens og hvem som har oppgaven.' },
-        { icon: '👥', title: 'Brukere', desc: 'Legg til nye familiemedlemmer, endre navn, avatar og farge. Slett brukere ved behov.' },
-        { icon: '📚', title: 'Lekser', desc: 'Skriv inn lekseinformasjon for å automatisk opprette en lekse-oppgave for barnet.' },
-        { icon: '⭐', title: 'Poeng', desc: 'Juster poeng manuelt — gi ekstrapoeng for god innsats, eller trekk fra ved brudd på avtaler.' },
-        { icon: '🔑', title: 'API-nøkkel', desc: 'Lim inn en Claude AI-nøkkel for å bruke bildeskannerens automatiske leksegjenkjenning.' },
+      {showInfo && <InfoModal title="Adminpanel — hjelp" items={[
+        { icon: '📋', title: 'Oppgaver', desc: 'Lag oppgaver med poeng, frekvens og hvem de gjelder. «Daglig» dukker opp hver dag, «Ukentlig» én gang i uka. «⚡ Bonus» er valgfrie ekstraoppgaver barna selv velger å ta.' },
+        { icon: '⚡', title: 'Bonusoppgaver', desc: 'Øverst i Oppgaver-fanen kan du raskt skru bonusoppgaver av og på med en bryter — uten å åpne redigering. Nyttig når f.eks. oppvasken må tas med én gang.' },
+        { icon: '👥', title: 'Brukere', desc: 'Legg til familiemedlemmer, endre navn, avatar, farge og aldersgruppe. Du kan sette PIN-kode for å låse en profil. Velg også bakgrunnsthema og app-logo her.' },
+        { icon: '🎨', title: 'Logo og bakgrunn', desc: 'Under Brukere-fanen: velg mellom 8 logoer (eller last opp eget bilde), og velg animert bakgrunn på forsiden — Space, Neon City, Galaxy, Unicorn, Gaming eller Hav.' },
+        { icon: '📚', title: 'Lekser', desc: 'Registrer lekser manuelt for å opprette en lekseoppgave automatisk for barnet. Du kan også skanne et bilde av lekseplanen med Anthropic AI.' },
+        { icon: '⭐', title: 'Poeng', desc: 'Juster poeng manuelt — gi ekstrapoeng for god innsats eller trekk fra. Skriv en årsak som vises i historikken.' },
       ]} onClose={() => setShowInfo(false)} />}
       <div className="flex items-center gap-3 mb-6">
         <div className="w-12 h-12 bg-indigo-600/20 rounded-2xl flex items-center justify-center">

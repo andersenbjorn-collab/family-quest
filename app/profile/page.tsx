@@ -23,11 +23,11 @@ const ANIMATIONS: { id: AnimationType; label: string; emoji: string }[] = [
 ];
 
 const PROFILE_INFO = [
-  { icon: '⭐', title: 'Nivå og poeng', desc: 'Totale poeng bestemmer ditt nivå. Hvert nivå har et eget navn — kan du nå toppen?' },
-  { icon: '🎨', title: 'Tema', desc: 'Velg fargetema for profilen din. Temaet påvirker farger og animasjoner.' },
-  { icon: '🎊', title: 'Feiringsanimasjon', desc: 'Velg hvilken animasjon som vises når du fullfører et mål.' },
-  { icon: '📋', title: 'Siste aktivitet', desc: 'Se de siste godkjente oppgavene og poengene du har tjent.' },
-  { icon: '👨‍👩‍👧', title: 'Familiepoeng (admin)', desc: 'Som admin ser du en oversikt over alle barns poeng og nivå.' },
+  { icon: '⭐', title: 'Nivå og poeng', desc: 'Totale poeng bestemmer nivået ditt. Det går fra Nybegynner (0 poeng) til Kosmisk (6000+ poeng). Kan du nå toppen?' },
+  { icon: '📊', title: 'Uke / måned / kvartal / år', desc: 'Poengene telles også per periode. Ukentlige og månedlige poeng nullstilles automatisk når perioden starter på nytt.' },
+  { icon: '🎨', title: 'Tema og animasjon', desc: 'Velg fargetema og feiringsanimasjon (konfetti, fyrverkeri osv.) som vises når du når et mål.' },
+  { icon: '👨‍👩‍👧', title: 'Familievisning (admin)', desc: 'Som forelder ser du alle barnas poeng og nivåer samlet på én side.' },
+  { icon: '📋', title: 'Siste aktivitet', desc: 'Nederst ser du de siste godkjente oppgavene og poengene du har tjent.' },
 ];
 
 export default function ProfilePage() {
