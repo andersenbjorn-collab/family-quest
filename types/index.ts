@@ -5,12 +5,15 @@ export type GoalPeriod = 'day' | 'week' | 'month' | 'quarter' | 'year';
 export type TaskStatus = 'pending' | 'approved' | 'rejected';
 export type UserRole = 'admin' | 'child';
 
+export type AgeGroup = 'little' | 'child' | 'teen';
+
 export interface User {
   id: string;
   name: string;
   avatar: string;
   photoData?: string;
   role: UserRole;
+  ageGroup?: AgeGroup;
   points: number;
   level: number;
   weeklyPoints: number;
@@ -59,7 +62,8 @@ export interface Goal {
   description: string;
   targetPoints: number;
   period: GoalPeriod;
-  userId: string;
+  userId: string;        // 'group' if isGroupGoal
+  isGroupGoal?: boolean; // all children contribute together
   reward: string;
   rewardDescription: string;
   rewardImage?: string;

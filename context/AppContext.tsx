@@ -81,6 +81,7 @@ interface AppContextType {
   getWeekCompletions: (userId: string) => CompletedTask[];
   getPendingApprovals: () => CompletedTask[];
   getUserGoalProgress: (userId: string, period: GoalPeriod) => number;
+  getGroupGoalProgress: (period: GoalPeriod) => number;
   setPocketMoneySetting: (userId: string, pointsPerKrone: number, currency: string) => void;
   payoutPocketMoney: (userId: string, points: number, note: string) => void;
   addInternetTimeReward: (userId: string, minutesEarned: number, pointCost: number) => void;
@@ -228,15 +229,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const newTotal = u.points + points;
         return { ...u, points: newTotal, level: getLevel(newTotal), weeklyPoints: u.weeklyPoints + points, monthlyPoints: u.monthlyPoints + points, quarterlyPoints: u.quarterlyPoints + points, yearlyPoints: u.yearlyPoints + points };
       });
+      const children = updatedUsers.filter(u => u.role === 'child');
       const updatedGoals = prev.goals.map(g => {
-        if (g.isCompleted || g.userId !== ct.userId) return g;
-        const user = updatedUsers.find(u => u.id === ct.userId);
-        if (!user) return g;
+        if (g.isCompleted) return g;
         let progress = 0;
-        if (g.period === 'week') progress = user.weeklyPoints;
-        else if (g.period === 'month') progress = user.monthlyPoints;
-        else if (g.period === 'quarter') progress = user.quarterlyPoints;
-        else if (g.period === 'year') progress = user.yearlyPoints;
+        if (g.isGroupGoal) {
+          // Group goal: sum all children's points for the period
+          if (g.period === 'week') progress = children.reduce((s, u) => s + u.weeklyPoints, 0);
+          else if (g.period === 'month') progress = children.reduce((s, u) => s + u.monthlyPoints, 0);
+          else if (g.period === 'quarter') progress = children.reduce((s, u) => s + u.quarterlyPoints, 0);
+          else if (g.period === 'year') progress = children.reduce((s, u) => s + u.yearlyPoints, 0);
+        } else {
+          if (g.userId !== ct.userId) return g;
+          const user = updatedUsers.find(u => u.id === ct.userId);
+          if (!user) return g;
+          if (g.period === 'week') progress = user.weeklyPoints;
+          else if (g.period === 'month') progress = user.monthlyPoints;
+          else if (g.period === 'quarter') progress = user.quarterlyPoints;
+          else if (g.period === 'year') progress = user.yearlyPoints;
+        }
         if (progress >= g.targetPoints) return { ...g, isCompleted: true, completedAt: new Date().toISOString() };
         return g;
       });
@@ -342,6 +353,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const getGroupGoalProgress = (period: GoalPeriod): number => {
+    const children = state.users.filter(u => u.role === 'child');
+    switch (period) {
+      case 'day': {
+        const today = new Date().toDateString();
+        return state.completedTasks
+          .filter(c => c.status === 'approved' && new Date(c.completedAt).toDateString() === today && children.some(u => u.id === c.userId))
+          .reduce((s, c) => s + (c.pointsAwarded ?? 0), 0);
+      }
+      case 'week': return children.reduce((s, u) => s + u.weeklyPoints, 0);
+      case 'month': return children.reduce((s, u) => s + u.monthlyPoints, 0);
+      case 'quarter': return children.reduce((s, u) => s + u.quarterlyPoints, 0);
+      case 'year': return children.reduce((s, u) => s + u.yearlyPoints, 0);
+    }
+  };
+
   const setPocketMoneySetting = (userId: string, pointsPerKrone: number, currency: string) => {
     setState(prev => ({ ...prev, pocketMoneySettings: [...prev.pocketMoneySettings.filter(s => s.userId !== userId), { userId, pointsPerKrone, currency }] }));
   };
@@ -410,7 +437,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addTask, updateTask, deleteTask,
       addGoal, updateGoal, deleteGoal, markGoalCelebrated,
       adjustPoints, addUser, updateUser, deleteUser, addHomework,
-      getTodayCompletions, getWeekCompletions, getPendingApprovals, getUserGoalProgress,
+      getTodayCompletions, getWeekCompletions, getPendingApprovals, getUserGoalProgress, getGroupGoalProgress,
       setPocketMoneySetting, payoutPocketMoney, addInternetTimeReward, useInternetTime, getPointsHistory,
     }}>
       {children}

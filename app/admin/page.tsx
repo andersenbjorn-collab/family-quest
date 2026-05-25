@@ -30,7 +30,7 @@ export default function AdminPage() {
   const [editingTask, setEditingTask] = useState<Partial<Task> & { isNew?: boolean } | null>(null);
   const [editingUser, setEditingUser] = useState<typeof state.users[0] | null>(null);
   const [pointsAdj, setPointsAdj] = useState({ userId: '', amount: 0, reason: '' });
-  const [newUser, setNewUser] = useState({ name: '', avatar: '🧒', role: 'child' as 'child' | 'admin', theme: 'gaming' as const, animation: 'confetti' as const, color: '#f59e0b' });
+  const [newUser, setNewUser] = useState({ name: '', avatar: '🧒', role: 'child' as 'child' | 'admin', ageGroup: 'child' as 'little' | 'child' | 'teen', theme: 'gaming' as const, animation: 'confetti' as const, color: '#f59e0b' });
   const [hwForm, setHwForm] = useState({ userId: state.users.find(u => u.role === 'child')?.id ?? '', subject: '', dueDate: '', estimatedMinutes: 30 });
   const [apiKey, setApiKey] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('fq-apikey') ?? '' : '');
   const [showInfo, setShowInfo] = useState(false);
@@ -226,6 +226,24 @@ export default function AdminPage() {
                   ))}
                 </div>
               </div>
+              {newUser.role === 'child' && (
+                <div>
+                  <label className="text-xs text-gray-400 mb-1 block">Aldersgruppe</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { value: 'little', label: '🐣 Liten', desc: '< 7 år' },
+                      { value: 'child',  label: '🧒 Barn',  desc: '7–12 år' },
+                      { value: 'teen',   label: '🎧 Ungdom', desc: '13+ år' },
+                    ] as const).map(({ value, label, desc }) => (
+                      <button key={value}
+                        onClick={() => setNewUser(u => ({ ...u, ageGroup: value }))}
+                        className={`py-2 rounded-xl text-xs font-bold border transition-all text-center ${(newUser.ageGroup ?? 'child') === value ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-white/5 border-white/10 text-gray-400'}`}>
+                        {label}<br /><span className="opacity-60 font-normal">{desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="text-xs text-gray-400 mb-1 block">Rolle</label>
                 <div className="flex gap-2">
@@ -237,7 +255,7 @@ export default function AdminPage() {
                   ))}
                 </div>
               </div>
-              <button onClick={() => { if (!newUser.name) return; addUser(newUser); setNewUser({ name: '', avatar: '🧒', role: 'child', theme: 'gaming', animation: 'confetti', color: '#f59e0b' }); }}
+              <button onClick={() => { if (!newUser.name) return; addUser({ ...newUser, ageGroup: newUser.ageGroup ?? 'child' }); setNewUser({ name: '', avatar: '🧒', role: 'child', ageGroup: 'child', theme: 'gaming', animation: 'confetti', color: '#f59e0b' }); }}
                 className="btn-primary w-full">
                 Legg til bruker
               </button>
@@ -789,6 +807,28 @@ export default function AdminPage() {
                   ))}
                 </div>
               </div>
+
+              {/* Age group */}
+              {editingUser.role === 'child' && (
+                <div>
+                  <label className="text-xs text-gray-400 mb-2 block">Aldersgruppe (tilpasser oppgavevisning)</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { value: 'little', label: '🐣 Liten', desc: 'Under 7 år' },
+                      { value: 'child',  label: '🧒 Barn',  desc: '7–12 år' },
+                      { value: 'teen',   label: '🎧 Ungdom', desc: '13+ år' },
+                    ] as const).map(({ value, label, desc }) => (
+                      <button
+                        key={value}
+                        onClick={() => setEditingUser(u => u ? { ...u, ageGroup: value } : u)}
+                        className={`py-2.5 rounded-xl text-xs font-bold border transition-all text-center ${(editingUser.ageGroup ?? 'child') === value ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-white/5 border-white/10 text-gray-400'}`}
+                      >
+                        {label}<br /><span className="opacity-60 font-normal">{desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Role */}
               <div>

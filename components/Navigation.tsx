@@ -5,7 +5,7 @@ import { useApp } from '@/context/AppContext';
 import { Home, CheckSquare, Target, BarChart3, Settings, Trophy } from 'lucide-react';
 
 const childNav = [
-  { href: '/dashboard', icon: Home, label: 'Hjem' },
+  { href: '/', icon: Home, label: 'Hjem' },
   { href: '/tasks', icon: CheckSquare, label: 'Oppgaver' },
   { href: '/goals', icon: Target, label: 'Mål' },
   { href: '/stats', icon: BarChart3, label: 'Statistikk' },
@@ -13,7 +13,7 @@ const childNav = [
 ];
 
 const adminNav = [
-  { href: '/dashboard', icon: Home, label: 'Hjem' },
+  { href: '/', icon: Home, label: 'Hjem' },
   { href: '/tasks', icon: CheckSquare, label: 'Oppgaver' },
   { href: '/goals', icon: Target, label: 'Mål' },
   { href: '/stats', icon: BarChart3, label: 'Statistikk' },
@@ -26,11 +26,14 @@ export default function Navigation() {
   const nav = isAdmin ? adminNav : childNav;
   const pending = getPendingApprovals().length;
 
+  // Hide navigation on the home/user-selection screen
+  if (pathname === '/') return null;
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-gray-900/95 backdrop-blur-lg border-t border-white/10">
       <div className="max-w-lg mx-auto flex">
         {nav.map(({ href, icon: Icon, label }) => {
-          const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
+          const active = href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href);
           const showBadge = href === '/admin' && pending > 0;
           return (
             <Link key={href} href={href} className="flex-1 flex flex-col items-center py-2.5 gap-0.5 relative group">

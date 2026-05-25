@@ -282,7 +282,59 @@ export default function TasksPage() {
   }
 
   // CHILD VIEW
+  const isLittle = currentUser.ageGroup === 'little';
+
+  // Overdue: daily tasks from yesterday not completed
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toDateString();
+  const yesterdayDOW = yesterday.getDay();
+  const yesterdayDoneIds = new Set(
+    state.completedTasks
+      .filter(c => c.userId === currentUser.id && new Date(c.completedAt).toDateString() === yesterdayStr)
+      .map(c => c.taskId)
+  );
+  const missedTasks = state.tasks.filter(t =>
+    t.isActive &&
+    t.assignedTo.includes(currentUser.id) &&
+    t.frequency === 'daily' &&
+    (!t.daysOfWeek || t.daysOfWeek.includes(yesterdayDOW)) &&
+    !yesterdayDoneIds.has(t.id)
+  );
+
+  // BIG card for little children (age < 7)
+  const renderLittleTask = (task: Task) => {
+    const ct = getTaskCompletion(task.id);
+    const isDone = ct?.status === 'approved' || ct?.status === 'pending';
+    const BG_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#8b5cf6', '#f97316'];
+    const color = BG_COLORS[Math.abs(task.id.charCodeAt(0) + task.id.charCodeAt(1)) % BG_COLORS.length];
+
+    return (
+      <div
+        key={task.id}
+        onClick={() => !isDone && setActiveTask(task)}
+        className={`rounded-3xl border-2 transition-all duration-200 ${isDone ? 'opacity-50' : 'active:scale-95 cursor-pointer'}`}
+        style={{ borderColor: isDone ? 'rgba(255,255,255,0.1)' : `${color}80`, background: isDone ? 'rgba(255,255,255,0.03)' : `${color}15` }}
+      >
+        <div className="p-5 flex flex-col items-center gap-3 text-center">
+          <div className="text-8xl leading-none">{isDone ? (ct?.status === 'approved' ? '✅' : '⏳') : task.icon}</div>
+          <p className={`font-black text-xl leading-tight ${isDone ? 'text-gray-500 line-through' : 'text-white'}`}>{task.title}</p>
+          {!isDone && (
+            <div className="w-full py-3 rounded-2xl font-black text-white text-lg" style={{ background: color }}>
+              Ferdig! ✓
+            </div>
+          )}
+          {ct?.status === 'pending' && <p className="text-yellow-400 text-sm font-bold">⏳ Venter...</p>}
+          {ct?.status === 'approved' && <p className="text-emerald-400 text-sm font-bold">🌟 +{ct.pointsAwarded} stjerner!</p>}
+        </div>
+      </div>
+    );
+  };
+
+  // Normal card for older children and teens
   const renderTask = (task: Task) => {
+    if (isLittle) return renderLittleTask(task);
+
     const ct = getTaskCompletion(task.id);
     const isDone = ct?.status === 'approved' || ct?.status === 'pending';
 
@@ -296,24 +348,18 @@ export default function TasksPage() {
             : 'bg-gray-900/80 border-white/10 active:scale-95 cursor-pointer hover:border-indigo-500/40 hover:bg-gray-800/80'
         }`}
       >
-        {/* Glow on undone tasks */}
         {!isDone && (
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/5 to-transparent pointer-events-none" />
         )}
-
         <div className="p-4 flex items-center gap-4">
           <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0 ${
             isDone ? 'bg-white/5' : 'bg-gradient-to-br from-indigo-600/30 to-purple-600/20'
           }`}>
             {ct?.status === 'approved' ? '✅' : ct?.status === 'pending' ? '⏳' : task.icon}
           </div>
-
           <div className="flex-1 min-w-0">
-            <p className={`font-bold text-base ${isDone ? 'line-through text-gray-500' : 'text-white'}`}>
-              {task.title}
-            </p>
+            <p className={`font-bold text-base ${isDone ? 'line-through text-gray-500' : 'text-white'}`}>{task.title}</p>
             <p className="text-gray-500 text-xs mt-0.5 truncate">{task.description}</p>
-
             {ct?.status === 'pending' && (
               <p className="text-yellow-400 text-xs mt-1 font-semibold flex items-center gap-1">
                 <Clock size={11} /> Venter på godkjenning
@@ -325,7 +371,6 @@ export default function TasksPage() {
               </p>
             )}
           </div>
-
           <div className="flex-shrink-0 flex flex-col items-end gap-1">
             <div className={`flex items-center gap-1 px-2.5 py-1 rounded-xl ${isDone ? 'bg-white/5' : 'bg-yellow-500/20'}`}>
               <Star size={13} className={isDone ? 'text-gray-600' : 'text-yellow-400 fill-yellow-400'} />
@@ -377,9 +422,22 @@ export default function TasksPage() {
       </div>
 
       {tab === 'today' && (
-        <div className="space-y-3">
+        <div className={`${isLittle ? 'grid grid-cols-2 gap-3' : 'space-y-3'}`}>
+          {/* Overdue from yesterday */}
+          {!isLittle && missedTasks.length > 0 && (
+            <div className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-3 mb-1">
+              <p className="text-orange-400 text-xs font-bold mb-2">⚠️ Ikke gjort i går ({missedTasks.length})</p>
+              {missedTasks.map(t => (
+                <div key={t.id} className="flex items-center gap-2 py-1">
+                  <span>{t.icon}</span>
+                  <span className="text-orange-300 text-sm line-through opacity-70">{t.title}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
           {todayTasks.length === 0 ? (
-            <div className="text-center py-12">
+            <div className={`text-center py-12 ${isLittle ? 'col-span-2' : ''}`}>
               <div className="text-5xl mb-3">🎯</div>
               <p className="text-gray-400">Ingen daglige oppgaver</p>
             </div>

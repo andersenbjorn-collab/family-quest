@@ -23,6 +23,7 @@ type FormState = {
   targetPoints: number;
   period: GoalPeriod;
   userIds: string[];
+  isGroupGoal: boolean;
   reward: string;
   rewardDescription: string;
   rewardImage?: string;
@@ -30,7 +31,8 @@ type FormState = {
 
 const EMPTY_FORM: FormState = {
   title: '', description: '', targetPoints: 100,
-  period: 'week', userIds: [], reward: '', rewardDescription: '', rewardImage: undefined,
+  period: 'week', userIds: [], isGroupGoal: false,
+  reward: '', rewardDescription: '', rewardImage: undefined,
 };
 
 const GOALS_INFO = [
@@ -42,7 +44,7 @@ const GOALS_INFO = [
 ];
 
 export default function GoalsPage() {
-  const { state, currentUser, isAdmin, addGoal, updateGoal, deleteGoal, getUserGoalProgress } = useApp();
+  const { state, currentUser, isAdmin, addGoal, updateGoal, deleteGoal, getUserGoalProgress, getGroupGoalProgress } = useApp();
   const [showAdd, setShowAdd] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -51,9 +53,11 @@ export default function GoalsPage() {
 
   const childUsers = state.users.filter(u => u.role === 'child');
   const viewUser = isAdmin ? null : currentUser;
+  const groupGoals = state.goals.filter(g => g.isGroupGoal);
+  const personalGoals = state.goals.filter(g => !g.isGroupGoal);
   const goalsToShow = viewUser
-    ? state.goals.filter(g => g.userId === viewUser.id)
-    : state.goals;
+    ? personalGoals.filter(g => g.userId === viewUser.id)
+    : personalGoals;
 
   const periods: GoalPeriod[] = ['day', 'week', 'month', 'quarter', 'year'];
 
@@ -69,7 +73,8 @@ export default function GoalsPage() {
       description: goal.description,
       targetPoints: goal.targetPoints,
       period: goal.period,
-      userIds: [goal.userId],
+      userIds: goal.isGroupGoal ? [] : [goal.userId],
+      isGroupGoal: goal.isGroupGoal ?? false,
       reward: goal.reward,
       rewardDescription: goal.rewardDescription,
       rewardImage: goal.rewardImage,
@@ -85,7 +90,7 @@ export default function GoalsPage() {
   };
 
   const saveForm = () => {
-    if (!form.title || !form.reward || form.userIds.length === 0) return;
+    if (!form.title || !form.reward || (!form.isGroupGoal && form.userIds.length === 0)) return;
     if (editingGoal) {
       updateGoal(editingGoal.id, {
         title: form.title,
@@ -98,15 +103,22 @@ export default function GoalsPage() {
         userId: form.userIds[0] ?? editingGoal.userId,
       });
     } else {
-      // New goal — create one per selected user
-      form.userIds.forEach(userId => addGoal({ ...form, userId }));
+      if (form.isGroupGoal) {
+        // One shared goal for the whole family
+        addGoal({ ...form, userId: 'group', isGroupGoal: true });
+      } else {
+        // Create one goal per selected user
+        form.userIds.forEach(userId => addGoal({ ...form, userId, isGroupGoal: false }));
+      }
     }
     closeModal();
   };
 
   const GoalCard = ({ goal }: { goal: Goal }) => {
-    const user = state.users.find(u => u.id === goal.userId);
-    const progress = getUserGoalProgress(goal.userId, goal.period);
+    const user = goal.isGroupGoal ? null : state.users.find(u => u.id === goal.userId);
+    const progress = goal.isGroupGoal
+      ? getGroupGoalProgress(goal.period)
+      : getUserGoalProgress(goal.userId, goal.period);
     const color = PERIOD_COLORS[goal.period];
 
     return (
@@ -121,7 +133,12 @@ export default function GoalsPage() {
                 </span>
               )}
             </div>
-            {isAdmin && user && (
+            {goal.isGroupGoal && (
+              <p className="text-indigo-400 text-xs mb-1 flex items-center gap-1">
+                👨‍👩‍👧 Familiemål — alle bidrar sammen
+              </p>
+            )}
+            {!goal.isGroupGoal && isAdmin && user && (
               <p className="text-indigo-400 text-xs mb-1">{user.avatar} {user.name}</p>
             )}
             {goal.description && <p className="text-gray-400 text-sm">{goal.description}</p>}
@@ -208,6 +225,18 @@ export default function GoalsPage() {
           )}
         </div>
       </div>
+
+      {/* Family/group goals — shown to all */}
+      {groupGoals.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-sm font-bold uppercase tracking-wider mb-3 flex items-center gap-2 text-indigo-400">
+            👨‍👩‍👧 Familiemål
+          </h2>
+          <div className="space-y-3">
+            {groupGoals.map(g => <GoalCard key={g.id} goal={g} />)}
+          </div>
+        </div>
+      )}
 
       {/* Stats summary for child */}
       {!isAdmin && (
@@ -302,7 +331,28 @@ export default function GoalsPage() {
                 />
               </div>
 
+              {/* Familiemål toggle */}
+              {!isEditingGoal && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, isGroupGoal: !f.isGroupGoal, userIds: [] }))}
+                    className={`w-full flex items-center gap-3 p-4 rounded-2xl border transition-all ${form.isGroupGoal ? 'bg-indigo-600/20 border-indigo-500/60 text-white' : 'bg-white/5 border-white/10 text-gray-400'}`}
+                  >
+                    <span className="text-2xl">👨‍👩‍👧</span>
+                    <div className="text-left flex-1">
+                      <p className="font-bold text-sm">Familiemål</p>
+                      <p className="text-xs opacity-70">Alle barnas poeng teller sammen</p>
+                    </div>
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${form.isGroupGoal ? 'bg-indigo-500 border-indigo-500' : 'border-gray-500'}`}>
+                      {form.isGroupGoal && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
+                    </div>
+                  </button>
+                </div>
+              )}
+
               {/* For hvem */}
+              {!form.isGroupGoal && (
               <div>
                 <label className="text-xs text-gray-400 mb-2 block">
                   {isEditingGoal ? 'Tildelt til' : 'For hvem'}
@@ -357,6 +407,7 @@ export default function GoalsPage() {
                   <p className="text-orange-400 text-xs mt-1">Velg minst én person</p>
                 )}
               </div>
+              )}
 
               {/* Belønning */}
               <div>
