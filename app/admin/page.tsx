@@ -127,39 +127,50 @@ export default function AdminPage() {
       {/* Tasks tab */}
       {tab === 'tasks' && (
         <div>
-          {/* ⚡ Bonus quick-control */}
+          {/* ⚡ Bonus quick-control — always visible */}
           {(() => {
             const bonusTasks = state.tasks.filter(t => t.frequency === 'bonus');
-            if (bonusTasks.length === 0) return null;
             return (
               <div className="card p-4 mb-4 border border-amber-500/20 bg-amber-500/5">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-white font-bold flex items-center gap-2">
                     ⚡ Bonusoppgaver
-                    <span className="text-xs font-normal text-gray-500">— skru av/på med én gang</span>
                   </h3>
-                  <span className="text-xs text-amber-400 font-semibold">
-                    {bonusTasks.filter(t => t.isActive).length}/{bonusTasks.length} på
-                  </span>
+                  {bonusTasks.length > 0 && (
+                    <span className="text-xs text-amber-400 font-semibold">
+                      {bonusTasks.filter(t => t.isActive).length}/{bonusTasks.length} aktive
+                    </span>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  {bonusTasks.map(task => (
-                    <div key={task.id} className="flex items-center gap-3">
-                      <span className="text-2xl w-8 text-center flex-shrink-0">{task.icon}</span>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-semibold truncate ${task.isActive ? 'text-white' : 'text-gray-500'}`}>{task.title}</p>
-                        <p className="text-xs text-gray-500">⭐ {task.points} poeng</p>
+                {bonusTasks.length === 0 ? (
+                  <div className="text-center py-3">
+                    <p className="text-gray-500 text-sm mb-3">Ingen bonusoppgaver ennå</p>
+                    <button
+                      onClick={() => setEditingTask({ ...DEFAULT_TASK, frequency: 'bonus', isNew: true })}
+                      className="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 text-amber-400 text-sm font-bold px-4 py-2 rounded-xl flex items-center gap-2 mx-auto transition-colors"
+                    >
+                      <Plus size={15} /> Lag første bonusoppgave
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {bonusTasks.map(task => (
+                      <div key={task.id} className="flex items-center gap-3">
+                        <span className="text-2xl w-8 text-center flex-shrink-0">{task.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-semibold truncate ${task.isActive ? 'text-white' : 'text-gray-500'}`}>{task.title}</p>
+                          <p className="text-xs text-gray-500">⭐ {task.points} poeng</p>
+                        </div>
+                        <button
+                          onClick={() => updateTask(task.id, { isActive: !task.isActive })}
+                          className={`relative w-14 h-7 rounded-full transition-all duration-200 flex-shrink-0 ${task.isActive ? 'bg-amber-500' : 'bg-white/10'}`}
+                        >
+                          <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all duration-200 ${task.isActive ? 'left-8' : 'left-1'}`} />
+                        </button>
                       </div>
-                      {/* Big toggle */}
-                      <button
-                        onClick={() => updateTask(task.id, { isActive: !task.isActive })}
-                        className={`relative w-14 h-7 rounded-full transition-all duration-200 flex-shrink-0 ${task.isActive ? 'bg-amber-500' : 'bg-white/10'}`}
-                      >
-                        <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all duration-200 ${task.isActive ? 'left-8' : 'left-1'}`} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })()}
