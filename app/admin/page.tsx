@@ -1,8 +1,9 @@
 'use client';
 import { useState, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
-import { Settings, Users, CheckSquare, Plus, Edit3, Trash2, Star, BookOpen, Sliders, Save, X, Camera, Loader, Key } from 'lucide-react';
+import { Settings, Users, CheckSquare, Plus, Edit3, Trash2, Star, BookOpen, Sliders, Save, X, Camera, Loader, Key, RotateCcw } from 'lucide-react';
 import { InfoModal, InfoButton } from '@/components/InfoModal';
+import { HOME_THEMES } from '@/components/ThemeBg';
 import type { Task, TaskFrequency, GoalPeriod } from '@/types';
 
 type AdminTab = 'tasks' | 'users' | 'homework' | 'points';
@@ -25,7 +26,7 @@ const DEFAULT_TASK: Omit<Task, 'id' | 'createdAt'> = {
 };
 
 export default function AdminPage() {
-  const { state, currentUser, isAdmin, signOut, addTask, updateTask, deleteTask, adjustPoints, addUser, updateUser, deleteUser, addHomework } = useApp();
+  const { state, currentUser, isAdmin, signOut, addTask, updateTask, deleteTask, adjustPoints, addUser, updateUser, deleteUser, addHomework, resetAllPoints, setHomeTheme, setUserPin } = useApp();
   const [tab, setTab] = useState<AdminTab>('tasks');
   const [editingTask, setEditingTask] = useState<Partial<Task> & { isNew?: boolean } | null>(null);
   const [editingUser, setEditingUser] = useState<typeof state.users[0] | null>(null);
@@ -211,6 +212,37 @@ export default function AdminPage() {
               )}
             </div>
           ))}
+
+          {/* Home theme picker */}
+          <div className="card p-4">
+            <h3 className="text-white font-bold mb-3 flex items-center gap-2">🎨 Startsidebakgrunn</h3>
+            <div className="grid grid-cols-3 gap-2">
+              {HOME_THEMES.map(({ value, label, emoji }) => (
+                <button key={value}
+                  onClick={() => setHomeTheme(value)}
+                  className={`py-2.5 rounded-2xl text-xs font-bold border transition-all text-center ${(state.homeTheme ?? 'space') === value ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-white/5 border-white/10 text-gray-400'}`}>
+                  <span className="text-xl block mb-0.5">{emoji}</span>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Reset all points */}
+          <div className="card p-4">
+            <h3 className="text-white font-bold mb-1 flex items-center gap-2"><RotateCcw size={18} className="text-red-400" /> Tilbakestill alle poeng</h3>
+            <p className="text-gray-500 text-xs mb-3">Nullstiller alle poeng, fullførte oppgaver og justeringer. Oppgaver og mål beholdes.</p>
+            <button
+              onClick={() => {
+                if (confirm('Er du sikker? Dette nullstiller alle poeng og fullførte oppgaver for hele familien. Dette kan ikke angres.')) {
+                  resetAllPoints();
+                }
+              }}
+              className="btn-danger w-full flex items-center justify-center gap-2 py-3"
+            >
+              <RotateCcw size={16} /> Tilbakestill alt til null
+            </button>
+          </div>
 
           {/* Add user */}
           <div className="card p-4">
@@ -829,6 +861,31 @@ export default function AdminPage() {
                   </div>
                 </div>
               )}
+
+              {/* PIN */}
+              <div>
+                <label className="text-xs text-gray-400 mb-2 block">🔒 PIN-kode (valgfritt — 4 siffer)</label>
+                <div className="flex gap-2">
+                  <input
+                    className="input flex-1"
+                    type="number"
+                    placeholder="Ingen PIN (åpen tilgang)"
+                    maxLength={4}
+                    value={editingUser.pin ?? ''}
+                    onChange={e => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                      setEditingUser(u => u ? { ...u, pin: val || undefined } : u);
+                    }}
+                  />
+                  {editingUser.pin && (
+                    <button onClick={() => setEditingUser(u => u ? { ...u, pin: undefined } : u)}
+                      className="bg-red-600/20 hover:bg-red-600/40 text-red-400 px-4 rounded-xl text-sm font-bold transition-colors">
+                      Fjern
+                    </button>
+                  )}
+                </div>
+                <p className="text-gray-600 text-xs mt-1">Lås brukeren med en 4-sifret PIN. Tomt = ingen lås.</p>
+              </div>
 
               {/* Role */}
               <div>

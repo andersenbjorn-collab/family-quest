@@ -23,6 +23,7 @@ export interface User {
   theme: Theme;
   animation: AnimationType;
   color: string;
+  pin?: string;
 }
 
 export interface Task {
@@ -128,6 +129,8 @@ export interface AppState {
   pocketMoneySettings: PocketMoneySettings[];
   pocketMoneyPayouts: PocketMoneyPayout[];
   internetTimeRewards: InternetTimeReward[];
+  homeTheme?: string;
+  lastResets?: { week?: string; month?: string; quarter?: string; year?: string };
 }
 
 export const LEVEL_THRESHOLDS = [0, 100, 250, 500, 900, 1400, 2100, 3000, 4200, 6000];

@@ -53,7 +53,41 @@ const DEFAULT_STATE: AppState = {
   pocketMoneySettings: [],
   pocketMoneyPayouts: [],
   internetTimeRewards: [],
+  homeTheme: 'space',
+  lastResets: {},
 };
+
+// ── Period key helpers ────────────────────────────────────────────────────────
+function getWeekKey(d: Date): string {
+  const tmp = new Date(d); tmp.setHours(0,0,0,0);
+  tmp.setDate(tmp.getDate() + 3 - (tmp.getDay() + 6) % 7);
+  const w1 = new Date(tmp.getFullYear(), 0, 4);
+  const wn = 1 + Math.round(((tmp.getTime() - w1.getTime()) / 86400000 - 3 + (w1.getDay() + 6) % 7) / 7);
+  return `${tmp.getFullYear()}-W${String(wn).padStart(2,'0')}`;
+}
+function getMonthKey(d: Date) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+function getQuarterKey(d: Date) { return `${d.getFullYear()}-Q${Math.ceil((d.getMonth()+1)/3)}`; }
+function getYearKey(d: Date) { return `${d.getFullYear()}`; }
+
+function applyPeriodResets(s: AppState): { next: AppState; changed: boolean } {
+  const now = new Date();
+  const week    = getWeekKey(now);
+  const month   = getMonthKey(now);
+  const quarter = getQuarterKey(now);
+  const year    = getYearKey(now);
+  const lr = s.lastResets ?? {};
+  let users = s.users;
+  const newResets = { ...lr };
+  let changed = false;
+
+  if (lr.week !== week)    { users = users.map(u => ({ ...u, weeklyPoints: 0 }));    newResets.week = week;       changed = true; }
+  if (lr.month !== month)  { users = users.map(u => ({ ...u, monthlyPoints: 0 }));   newResets.month = month;     changed = true; }
+  if (lr.quarter !== quarter) { users = users.map(u => ({ ...u, quarterlyPoints: 0 })); newResets.quarter = quarter; changed = true; }
+  if (lr.year !== year)    { users = users.map(u => ({ ...u, yearlyPoints: 0 }));    newResets.year = year;       changed = true; }
+
+  if (!changed) return { next: s, changed: false };
+  return { next: { ...s, users, lastResets: newResets }, changed: true };
+}
 
 interface AppContextType {
   state: AppState;
@@ -77,6 +111,9 @@ interface AppContextType {
   updateUser: (userId: string, updates: Partial<User>) => void;
   deleteUser: (userId: string) => void;
   addHomework: (entry: Omit<HomeworkEntry, 'id' | 'createdAt' | 'isTaskCreated'>) => void;
+  resetAllPoints: () => void;
+  setHomeTheme: (theme: string) => void;
+  setUserPin: (userId: string, pin: string) => void;
   getTodayCompletions: (userId: string) => CompletedTask[];
   getWeekCompletions: (userId: string) => CompletedTask[];
   getPendingApprovals: () => CompletedTask[];
@@ -131,8 +168,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('fq-current-user') : null;
       const tasks = dbState.tasks?.length > 0 ? dbState.tasks : DEFAULT_STATE.tasks;
       const users = dbState.users?.length > 0 ? dbState.users : DEFAULT_STATE.users;
-      isLoadingFromDB.current = true;
-      setState({ ...DEFAULT_STATE, ...dbState, tasks, users, currentUserId: savedUserId ?? dbState.currentUserId });
+      const merged: AppState = { ...DEFAULT_STATE, ...dbState, tasks, users, currentUserId: savedUserId ?? dbState.currentUserId };
+      const { next, changed } = applyPeriodResets(merged);
+      // Only skip save if no period resets happened (pure load). If resets changed data, let it save back.
+      if (!changed) isLoadingFromDB.current = true;
+      setState(next);
     };
 
     // Load from Supabase
@@ -320,6 +360,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
+  const resetAllPoints = () => {
+    setState(prev => ({
+      ...prev,
+      users: prev.users.map(u => ({ ...u, points: 0, level: 0, weeklyPoints: 0, monthlyPoints: 0, quarterlyPoints: 0, yearlyPoints: 0 })),
+      completedTasks: [],
+      adjustments: [],
+      goals: prev.goals.map(g => ({ ...g, isCompleted: false, completedAt: undefined, celebrationShown: false })),
+    }));
+  };
+
+  const setHomeTheme = (theme: string) => {
+    setState(prev => ({ ...prev, homeTheme: theme }));
+  };
+
+  const setUserPin = (userId: string, pin: string) => {
+    setState(prev => ({
+      ...prev,
+      users: prev.users.map(u => u.id === userId ? { ...u, pin: pin || undefined } : u),
+    }));
+  };
+
   const addHomework = (entry: Omit<HomeworkEntry, 'id' | 'createdAt' | 'isTaskCreated'>) => {
     const hw: HomeworkEntry = { ...entry, id: uuidv4(), isTaskCreated: false, createdAt: new Date().toISOString() };
     setState(prev => ({ ...prev, homeworkEntries: [...prev.homeworkEntries, hw] }));
@@ -436,7 +497,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       switchUser, completeTask, approveTask, rejectTask,
       addTask, updateTask, deleteTask,
       addGoal, updateGoal, deleteGoal, markGoalCelebrated,
-      adjustPoints, addUser, updateUser, deleteUser, addHomework,
+      adjustPoints, addUser, updateUser, deleteUser, addHomework, resetAllPoints, setHomeTheme, setUserPin,
       getTodayCompletions, getWeekCompletions, getPendingApprovals, getUserGoalProgress, getGroupGoalProgress,
       setPocketMoneySetting, payoutPocketMoney, addInternetTimeReward, useInternetTime, getPointsHistory,
     }}>
