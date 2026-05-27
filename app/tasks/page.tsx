@@ -148,9 +148,17 @@ export default function TasksPage() {
     t.isActive && (isAdmin || t.assignedTo.includes(currentUser.id))
   );
 
-  const getTaskCompletion = (taskId: string): CompletedTask | null => {
-    const all = [...todayCompletions, ...weekCompletions];
-    return all.find(c => c.taskId === taskId) ?? null;
+  const getTaskCompletion = (task: Task): CompletedTask | null => {
+    if (task.frequency === 'daily') {
+      // Daily tasks reset every midnight — only look at today's completions
+      return todayCompletions.find(c => c.taskId === task.id) ?? null;
+    } else if (task.frequency === 'weekly') {
+      // Weekly tasks reset weekly — look at last 7 days
+      return weekCompletions.find(c => c.taskId === task.id) ?? null;
+    } else {
+      // 'once' tasks are done forever — check all completions for this user
+      return state.completedTasks.find(c => c.taskId === task.id && c.userId === currentUser.id) ?? null;
+    }
   };
 
   const handleComplete = (photoData?: string, note?: string) => {
@@ -330,7 +338,7 @@ export default function TasksPage() {
 
   // BIG card for little children (age < 7)
   const renderLittleTask = (task: Task) => {
-    const ct = getTaskCompletion(task.id);
+    const ct = getTaskCompletion(task);
     const isDone = ct?.status === 'approved' || ct?.status === 'pending';
     const BG_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#8b5cf6', '#f97316'];
     const color = BG_COLORS[Math.abs(task.id.charCodeAt(0) + task.id.charCodeAt(1)) % BG_COLORS.length];
@@ -361,7 +369,7 @@ export default function TasksPage() {
   const renderTask = (task: Task) => {
     if (isLittle) return renderLittleTask(task);
 
-    const ct = getTaskCompletion(task.id);
+    const ct = getTaskCompletion(task);
     const isDone = ct?.status === 'approved' || ct?.status === 'pending';
 
     return (

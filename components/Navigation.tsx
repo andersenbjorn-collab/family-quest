@@ -34,7 +34,7 @@ export default function Navigation() {
       <div className="max-w-lg mx-auto flex">
         {nav.map(({ href, icon: Icon, label }) => {
           const active = href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href);
-          const showBadge = href === '/admin' && pending > 0;
+          const showBadge = (href === '/admin' || href === '/tasks') && pending > 0;
           return (
             <Link key={href} href={href} className="flex-1 flex flex-col items-center py-2.5 gap-0.5 relative group">
               <div className={`relative p-2 rounded-xl transition-all duration-200 ${active ? 'bg-indigo-600 scale-110' : 'group-hover:bg-white/10'}`}>
