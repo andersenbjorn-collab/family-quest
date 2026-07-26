@@ -2,12 +2,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
-import { Settings, X, Delete } from 'lucide-react';
+import { Settings, X, Delete, LogOut } from 'lucide-react';
 import ThemeBg from '@/components/ThemeBg';
 import AppLogo from '@/components/AppLogo';
 
 export default function SelectUserPage() {
-  const { state, switchUser } = useApp();
+  const { state, switchUser, signOut } = useApp();
   const router = useRouter();
 
   const children = state.users.filter(u => u.role === 'child');
@@ -218,8 +218,8 @@ export default function SelectUserPage() {
           </div>
         )}
 
-        {/* Foreldrekontroll */}
-        <div className="mt-auto pt-8 flex justify-center">
+        {/* Foreldrekontroll + Logg ut */}
+        <div className="mt-auto pt-8 flex justify-center gap-3">
           <button
             onClick={() => {
               const admin = admins[0];
@@ -230,6 +230,13 @@ export default function SelectUserPage() {
             style={{ background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)' }}
           >
             <Settings size={16} /> Foreldrekontroll
+          </button>
+          <button
+            onClick={() => { if (confirm('Logg ut av Family Quest?')) signOut(); }}
+            className="flex items-center gap-2 border text-gray-500 hover:text-red-400 text-sm font-semibold px-4 py-3 rounded-2xl transition-all"
+            style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(8px)' }}
+          >
+            <LogOut size={16} />
           </button>
         </div>
       </div>
