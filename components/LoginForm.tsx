@@ -1,29 +1,40 @@
 'use client';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Star, Mail, Lock, UserPlus, LogIn, Loader } from 'lucide-react';
+import { Mail, Lock, UserPlus, LogIn, Loader, ArrowLeft } from 'lucide-react';
+import AppLogo from '@/components/AppLogo';
+
+type Mode = 'login' | 'signup' | 'forgot';
 
 export default function LoginForm() {
+  const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
+  const reset = (m: Mode) => { setMode(m); setError(''); setDone(false); };
+
   const handleSubmit = async () => {
-    if (!email || !password) { setError('Fyll inn e-post og passord'); return; }
-    if (password.length < 6) { setError('Passordet må være minst 6 tegn'); return; }
     setError('');
+    if (!email) { setError('Fyll inn e-post'); return; }
+    if (mode !== 'forgot' && password.length < 6) { setError('Passordet må være minst 6 tegn'); return; }
     setLoading(true);
     try {
-      if (isSignUp) {
+      if (mode === 'signup') {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
         setDone(true);
-      } else {
+      } else if (mode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        setDone(true);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Noe gikk galt';
@@ -35,15 +46,30 @@ export default function LoginForm() {
     }
   };
 
-  if (done) {
+  if (done && mode === 'signup') {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center max-w-sm">
           <div className="text-6xl mb-4">📧</div>
           <h2 className="text-white font-black text-xl mb-2">Sjekk e-posten din!</h2>
           <p className="text-gray-400 text-sm">Vi sendte en bekreftelseslenke til <strong className="text-white">{email}</strong>. Klikk på lenken og logg deretter inn.</p>
-          <button onClick={() => { setDone(false); setIsSignUp(false); }} className="btn-primary mt-6 w-full">
+          <button onClick={() => reset('login')} className="btn-primary mt-6 w-full">
             Gå til innlogging
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (done && mode === 'forgot') {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="text-center max-w-sm">
+          <div className="text-6xl mb-4">📬</div>
+          <h2 className="text-white font-black text-xl mb-2">Lenke sendt!</h2>
+          <p className="text-gray-400 text-sm">Sjekk innboksen til <strong className="text-white">{email}</strong> og følg lenken for å sette nytt passord.</p>
+          <button onClick={() => reset('login')} className="btn-primary mt-6 w-full">
+            Tilbake til innlogging
           </button>
         </div>
       </div>
@@ -56,7 +82,7 @@ export default function LoginForm() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="w-20 h-20 bg-indigo-600/20 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-indigo-500/30">
-            <span className="text-5xl">🎮</span>
+            <AppLogo logo="shield" size={48} />
           </div>
           <h1 className="text-3xl font-black text-white">Family Quest</h1>
           <p className="text-gray-500 mt-1 text-sm">Familiens oppdragssentral</p>
@@ -64,9 +90,21 @@ export default function LoginForm() {
 
         {/* Card */}
         <div className="card p-6 space-y-4">
-          <h2 className="text-white font-bold text-lg">
-            {isSignUp ? '🚀 Opprett familieprofil' : '👋 Logg inn'}
-          </h2>
+          {mode === 'forgot' ? (
+            <>
+              <div className="flex items-center gap-2 mb-1">
+                <button onClick={() => reset('login')} className="text-gray-500 hover:text-white transition-colors">
+                  <ArrowLeft size={18} />
+                </button>
+                <h2 className="text-white font-bold text-lg">🔑 Glemt passord?</h2>
+              </div>
+              <p className="text-gray-500 text-sm">Skriv inn e-posten din, så sender vi en lenke for å nullstille passordet.</p>
+            </>
+          ) : (
+            <h2 className="text-white font-bold text-lg">
+              {mode === 'signup' ? '🚀 Opprett familieprofil' : '👋 Logg inn'}
+            </h2>
+          )}
 
           <div>
             <label className="text-xs text-gray-400 mb-1 flex items-center gap-1 block">
@@ -82,19 +120,21 @@ export default function LoginForm() {
             />
           </div>
 
-          <div>
-            <label className="text-xs text-gray-400 mb-1 flex items-center gap-1 block">
-              <Lock size={11} /> Passord
-            </label>
-            <input
-              className="input"
-              type="password"
-              placeholder="Minst 6 tegn"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-            />
-          </div>
+          {mode !== 'forgot' && (
+            <div>
+              <label className="text-xs text-gray-400 mb-1 flex items-center gap-1 block">
+                <Lock size={11} /> Passord
+              </label>
+              <input
+                className="input"
+                type="password"
+                placeholder="Minst 6 tegn"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+              />
+            </div>
+          )}
 
           {error && (
             <div className="bg-red-500/10 border border-red-500/30 rounded-2xl px-4 py-3">
@@ -109,25 +149,44 @@ export default function LoginForm() {
           >
             {loading ? (
               <><Loader size={18} className="animate-spin" /> Laster...</>
-            ) : isSignUp ? (
+            ) : mode === 'signup' ? (
               <><UserPlus size={18} /> Opprett konto</>
+            ) : mode === 'forgot' ? (
+              <><Mail size={18} /> Send tilbakestillingslenke</>
             ) : (
               <><LogIn size={18} /> Logg inn</>
             )}
           </button>
 
-          <button
-            onClick={() => { setIsSignUp(s => !s); setError(''); }}
-            className="w-full text-center text-sm text-gray-500 hover:text-gray-300 transition-colors py-1"
-          >
-            {isSignUp
-              ? 'Har du allerede konto? Logg inn'
-              : 'Ny her? Opprett familieprofil'}
-          </button>
+          {mode === 'login' && (
+            <div className="flex flex-col gap-1 pt-1">
+              <button
+                onClick={() => reset('signup')}
+                className="w-full text-center text-sm text-gray-500 hover:text-gray-300 transition-colors py-1"
+              >
+                Ny her? Opprett familieprofil
+              </button>
+              <button
+                onClick={() => reset('forgot')}
+                className="w-full text-center text-sm text-gray-600 hover:text-gray-400 transition-colors py-1"
+              >
+                Glemt passord?
+              </button>
+            </div>
+          )}
+
+          {mode === 'signup' && (
+            <button
+              onClick={() => reset('login')}
+              className="w-full text-center text-sm text-gray-500 hover:text-gray-300 transition-colors py-1"
+            >
+              Har du allerede konto? Logg inn
+            </button>
+          )}
         </div>
 
-        <p className="text-center text-gray-600 text-xs mt-6 flex items-center justify-center gap-1">
-          <Star size={10} className="text-yellow-500" /> Data lagres trygt og deles i familien
+        <p className="text-center text-gray-600 text-xs mt-6">
+          Hver familie har sin egen konto — data deles aldri med andre
         </p>
       </div>
     </div>
